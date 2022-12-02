@@ -118,9 +118,12 @@ page 50125 PTEFtpFiles
     var
         TempNameValueBuffer: Record "Name/Value Buffer" temporary;
         BCFtp: Codeunit PTEBCFTP;
-        JObject: JsonObject;
-        JArray: JsonArray;
-        FilenameLbl: Label 'fileName';
+        Base64: Codeunit "Base64 Convert";
+        TempBlob: Codeunit "Temp Blob";
+        ReadStream: InStream;
+        WriteStream: OutStream;
+        FileContent: Text;
+        ToFileName: Text;
     begin
         if (Rec.Value = ZeroSizeLbl) or (Rec.Name = UpLevelLbl) then
             exit;
@@ -130,11 +133,15 @@ page 50125 PTEFtpFiles
         CurrPage.SetSelectionFilter(TempNameValueBuffer);
         if TempNameValueBuffer.FindSet() then
             repeat
-                JObject.Add(FilenameLbl, TempNameValueBuffer.Name);
-                JArray.Add(JObject);
+                //TODO: Note failures.
+                FileContent := BCFtp.DownLoadFile(JSettings, TempNameValueBuffer.Name);
+                if StrLen(FileContent) > 0 then begin
+                    TempBlob.CreateOutStream(WriteStream, TextEncoding::UTF8);
+                    WriteStream.WriteText(Base64.FromBase64(FileContent));
+                    TempBlob.CreateInStream(ReadStream);
+                    DownloadFromStream(ReadStream, 'Download FTP File', '', '', ToFIleName);
+                end;
             until TempNameValueBuffer.Next() = 0;
-
-        BCFtp.DownLoadFile(JSettings, JArray);
     end;
 
     local procedure InsertNameValue(JToken: JsonToken; Id: Integer)

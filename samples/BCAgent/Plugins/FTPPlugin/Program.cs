@@ -7,6 +7,7 @@
     using Newtonsoft.Json.Linq;
     using System;
     using System.Collections.Generic;
+    using System.IO;
 
     [AgentPlugin("ftp/V1.0")]
     public class FTPPlugin : IAgentPlugin {
@@ -14,6 +15,7 @@
         protected string UserName { get; set; }
         protected string Passwd { get; set; }
         protected string RootFolder { get; set; }
+        protected string LocalFolder { get; set; }
 
 
         [PluginMethod("GET")]
@@ -92,25 +94,22 @@
         }
 
         [PluginMethod("GET")]
-        public string DownloadFileFtp(string jsonsettings, string filearray) {
+        public string DownloadFileFtp(string jsonsettings, string filename) {
             string returnval = string.Empty;
             SetSettings(jsonsettings);
-
-            JArray files = JArray.Parse(filearray);
-            JArray failedlist = new JArray();
+            
             try {
-                foreach (JObject item in files) {
-                    JToken jtoken = item.GetValue("fileName");
-                    if (! DownloadFile(this.HostName, this.UserName, this.Passwd, jtoken.Value<string>())) {
-                        failedlist.Add(item); 
-                    }
+                if (!DownloadFile(this.HostName, this.UserName, this.Passwd, filename)) {
+                    return string.Empty;
+                }
+                else {
+                    Byte[] bytes = File.ReadAllBytes(Path.Combine(this.LocalFolder, filename));
+                    return Convert.ToBase64String(bytes);
                 }
             }
             catch (Exception ex) {
-                return (JsonConvert.SerializeObject(string.Format("Error downloading file:\n,{0}", ex.Message)));
+                return String.Empty;
             }
-
-            return JsonConvert.SerializeObject(failedlist);
         }
 
         [PluginMethod("GET")]
@@ -140,7 +139,7 @@
                 ftp.Connect();
 
                 // download a folder and all its files
-                //ftp.DownloadDirectory(@"C:\website\logs\", @"/public_html/logs", FtpFolderSyncMode.Update);
+                ftp.DownloadDirectory(this.LocalFolder, foldername, FtpFolderSyncMode.Update);
 
                 // download a folder and all its files, and delete extra files on disk
                 //List<FtpResult> result = ftp.DownloadDirectory(@"C:\temp\", foldername, FtpFolderSyncMode.Mirror);
@@ -153,7 +152,7 @@
                 ftp.Connect();
 
                 // download a file
-                FtpStatus res = ftp.DownloadFile(string.Format(@"c:\temp\{0}", filename), filename);
+                FtpStatus res = ftp.DownloadFile(string.Format(this.LocalFolder, filename), filename);
                 return res.IsSuccess();
             }
         }
@@ -206,12 +205,14 @@
             const string UserNameLbl = "userName";
             const string PasswdLbl = "passwd";
             const string RootFolderLbl = "rootFolder";
+            const string LocalFolderLbl = "localFolder";
 
             JObject Json = JObject.Parse(JsonString);
             this.HostName = Json.GetValue(HostNameLbl).ToString();
             this.UserName = Json.GetValue(UserNameLbl).ToString();
             this.Passwd = Json.GetValue(PasswdLbl).ToString();
             this.RootFolder = Json.GetValue(RootFolderLbl).ToString();
+            this.LocalFolder = Json.GetValue(LocalFolderLbl).ToString();
         }
     }
 

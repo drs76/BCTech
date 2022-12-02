@@ -16,7 +16,7 @@ codeunit 50124 PTEBCFTP
         FtpPluginNameTok: Label '/ftp/V1.0', Locked = true;
         ConnectFtpTok: Label '/ConnectFtp?jsonsettings=%1', Locked = true, Comment = '%1 - JSettings';
         GetFileListFtpTok: Label '/GetFilesFtp?jsonsettings=%1&foldername=%2', Locked = true, Comment = '%1 - JSettings, %2 - Foldername';
-        DownloadFileFtpTok: Label '/DownloadFileFtp?jsonsettings=%1&filearray=%2', Locked = true, Comment = '%1 - JSettings, %2 - Filename';
+        DownloadFileFtpTok: Label '/DownloadFileFtp?jsonsettings=%1&filename=%2', Locked = true, Comment = '%1 - JSettings, %2 - Filename';
         GetWorkDirectoryFtpTok: Label '/GetWorkingDirectoryFtp?jsonsettings=%1', Locked = true, Comment = '%1 - JSettings';
         SetWorkingDirectoryFtpTok: Label '/SetWorkingDirectoryFtp?jsonsettings=%1&foldername=%2', Locked = true, Comment = '%1 - JSettings, %2 - Foldername';
         CombineTxt: Label '%1%2', Comment = '%1 - String1, %2 - String2';
@@ -53,16 +53,14 @@ codeunit 50124 PTEBCFTP
     /// DownLoadFile.
     /// </summary>
     /// <param name="JSettings">JsonObject.</param>
-    /// <param name="FileArray">JsonArray.</param>
+    /// <param name="FileName">Text.</param>
     /// <returns>Return variable Result of type Text.</returns>
-    procedure DownLoadFile(JSettings: JsonObject; FileArray: JsonArray) Result: Text
+    procedure DownLoadFile(JSettings: JsonObject; FileName: Text) Result: Text
     var
-        ArrayString: Text;
         SettingsString: Text;
     begin
-        FileArray.WriteTo(ArrayString);
         JSettings.WriteTo(SettingsString);
-        ServiceBusRelay.Get(BuildRequest(DownloadFileFtpTok, SettingsString, ArrayString), Result);
+        ServiceBusRelay.Get(BuildRequest(DownloadFileFtpTok, SettingsString, FileName), Result);
     end;
 
     /// <summary>

@@ -1,12 +1,15 @@
 /// <summary>
-/// Page PTEBCFTP (ID 50124).
+/// Page PTEBCFTPClient (ID 50124).
 /// </summary>
-page 50124 PTEBCFTP
+page 50124 PTEBCFTPClient
 {
-    Caption = 'BC FTP';
+    Caption = 'BC FTP Client';
     UsageCategory = Administration;
     ApplicationArea = All;
-
+    PageType = Document;
+    InsertAllowed = false;
+    ModifyAllowed = true;
+    DeleteAllowed = false;
 
     layout
     {
@@ -20,45 +23,25 @@ page 50124 PTEBCFTP
                 {
                     Caption = 'FTP Host';
                     ApplicationArea = All;
+                    TableRelation = PTEBCFtpHost;
 
                     trigger OnValidate()
                     begin
-                        UpdateSettings();
+                        SetHost();
                     end;
                 }
 
-                field(FtpUser; FtpUser)
-                {
-                    Caption = 'FTP User';
-                    ApplicationArea = All;
-
-                    trigger OnValidate()
-                    begin
-                        UpdateSettings();
-                    end;
-                }
-
-                field(FtpPasswd; FtpPasswd)
-                {
-                    Caption = 'FTP Passwd';
-                    ApplicationArea = All;
-                    ExtendedDatatype = Masked;
-
-                    trigger OnValidate()
-                    begin
-                        UpdateSettings();
-                    end;
-                }
 
                 field(FtpFolder; FtpFolder)
                 {
                     Caption = 'FTP Folder';
                     ApplicationArea = All;
+                }
 
-                    trigger OnValidate()
-                    begin
-                        UpdateSettings();
-                    end;
+                field(LocalFolder; LocalFolder)
+                {
+                    Caption = 'Local Folder';
+                    ApplicationArea = All;
                 }
             }
 
@@ -76,7 +59,9 @@ page 50124 PTEBCFTP
 
             part(BCFtpFiles; PTEFtpFiles)
             {
+                Editable = false;
                 ApplicationArea = All;
+                Caption = 'Ftp File List';
             }
         }
     }
@@ -132,6 +117,9 @@ page 50124 PTEBCFTP
                 ToolTip = 'Download selected file(s)';
                 ApplicationArea = All;
                 Image = Download;
+                Promoted = true;
+                PromotedOnly = true;
+                PromotedCategory = Process;
 
                 trigger OnAction()
                 begin
@@ -145,39 +133,43 @@ page 50124 PTEBCFTP
         BCFtp: Codeunit PTEBCFTP;
         JSettings: JsonObject;
         FtpHost: Text;
-        FtpUser: Text;
-        FtpPasswd: Text;
         FtpResponse: Text;
         FtpFolder: Text;
-        HostnameLbl: Label 'hostName';
-        UsernameLbl: Label 'userName';
-        PasswdLbl: Label 'passwd';
+        LocalFolder: Text;
         RootFolderLbl: Label 'rootFolder';
+        LocalFolderLbl: Label 'localFolder';
 
 
     local procedure UpdateSettings()
     begin
-        if JSettings.Contains(HostnameLbl) then
-            JSettings.Replace(hostNameLbl, FtpHost)
-        else
-            JSettings.Add(hostNameLbl, FtpHost);
-
-        if JSettings.Contains(UsernameLbl) then
-            JSettings.Replace(userNameLbl, FtpUser)
-        else
-            JSettings.Add(userNameLbl, FtpUser);
-
-        if JSettings.Contains(PasswdLbl) then
-            JSettings.Replace(passwdLbl, FtpPasswd)
-        else
-            JSettings.Add(passwdLbl, FtpPasswd);
-
         if JSettings.Contains(RootFolderLbl) then
             JSettings.Replace(rootFolderLbl, FtpFolder)
         else
             JSettings.Add(rootFolderLbl, FtpFolder);
 
+        if JSettings.Contains(LocalFolderLbl) then
+            JSettings.Replace(LocalFolderLbl, LocalFolder)
+        else
+            JSettings.Add(LocalFolderLbl, LocalFolder);
+
         BCFTP.SettingsToVars(JSettings);
         CurrPage.BCFtpFiles.Page.SetSettings(JSettings);
+    end;
+
+    local procedure SetHost()
+    var
+        BCFtpHost: Record PTEBCFtpHost;
+        FtpHostMgt: Codeunit PTEBCFtpHostMgt;
+    begin
+        Clear(JSettings);
+        Clear(FtpFolder);
+        Clear(LocalFolder);
+        if BCFtpHost.Get(FtpHost) then begin
+            FtpHostMgt.GetHostDetails(FtpHost, JSettings);
+            FtpFolder := BCFtpHost.RootFolder;
+            LocalFolder := BCFtpHost.LocalFolder;
+            UpdateSettings();
+        end;
+        CurrPage.Update(false);
     end;
 }
