@@ -3,6 +3,7 @@
     using FluentFTP;
     using FluentFTP.Helpers;
     using Microsoft.Dynamics.BusinessCentral.Agent.Common;
+    using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using System;
@@ -25,12 +26,11 @@
 
             try {
                 Connect(this.HostName, this.UserName, this.Passwd);
+                return SetReturnValue(true.ToString(), string.Empty);
             }
             catch (Exception ex) {
-                returnval = string.Format("Error connecting:,{0}", ex.Message);
+                return SetReturnValue(string.Empty, string.Format("Error connecting:,{0}", ex.Message));
             }
-
-            return JsonConvert.SerializeObject(returnval);
         }
 
         [PluginMethod("GET")]
@@ -39,13 +39,12 @@
             SetSettings(jsonsettings);
 
             try {
-                returnval = GetListing(this.HostName, this.UserName, this.Passwd, foldername).ToString();
+                return SetReturnValue(GetListing(this.HostName, this.UserName, this.Passwd, foldername).ToString(), string.Empty);
             }
             catch (Exception ex) {
-                returnval = JsonConvert.SerializeObject(string.Format("Error getting files:\n,{0}", ex.Message));
-            }
 
-            return returnval;
+                return SetReturnValue(string.Empty, JsonConvert.SerializeObject(string.Format("Error getting files:\n,{0}", ex.Message)));
+            }
         }
 
         [PluginMethod("GET")]
@@ -54,13 +53,11 @@
             SetSettings(jsonsettings);
 
             try {
-                DownloadDirectory(this.HostName, this.UserName, this.Passwd, foldername);
+                return SetReturnValue(Convert.ToString(DownloadDirectory(this.HostName, this.UserName, this.Passwd, foldername)), string.Empty);
             }
             catch (Exception ex) {
-                returnval = string.Format("Error downloading folders:\n,{0}", ex.Message);
+                return SetReturnValue(string.Empty, string.Format("Error downloading folders:\n,{0}", ex.Message));
             }
-
-            return JsonConvert.SerializeObject(returnval);
         }
 
         [PluginMethod("GET")]
@@ -70,12 +67,11 @@
 
             try {
                 SetWorkingDirectory(this.HostName, this.UserName, this.Passwd, foldername);
+                return (SetReturnValue(string.Empty, string.Empty));
             }
             catch (Exception ex) {
-                returnval = string.Format("Error downloading folders:\n,{0}", ex.Message);
+                return SetReturnValue(string.Empty, string.Format("Error downloading folders:\n,{0}", ex.Message));
             }
-
-            return JsonConvert.SerializeObject(returnval);
         }
 
         [PluginMethod("GET")]
@@ -84,13 +80,11 @@
             SetSettings(jsonsettings);
 
             try {
-                return (JsonConvert.SerializeObject(DownloadDirectory(this.HostName, this.UserName, this.Passwd, foldername)));
+                return SetReturnValue(JsonConvert.SerializeObject(DownloadDirectory(this.HostName, this.UserName, this.Passwd, foldername)), string.Empty);
             }
             catch (Exception ex) {
-                returnval = string.Format("Error downloading folders:\n,{0}", ex.Message);
+                return SetReturnValue(string.Empty, string.Format("Error downloading folders:\n,{0}", ex.Message)); 
             }
-
-            return JsonConvert.SerializeObject(returnval);
         }
 
         [PluginMethod("GET")]
@@ -100,15 +94,15 @@
             
             try {
                 if (!DownloadFile(this.HostName, this.UserName, this.Passwd, filename)) {
-                    return string.Empty;
+                    return SetReturnValue(string.Empty, "Download failed.");
                 }
                 else {
                     Byte[] bytes = File.ReadAllBytes(Path.Combine(this.LocalFolder, filename));
-                    return Convert.ToBase64String(bytes);
+                    return SetReturnValue(Convert.ToBase64String(bytes), string.Empty);
                 }
             }
             catch (Exception ex) {
-                return String.Empty;
+                return SetReturnValue(string.Empty,ex.Message); 
             }
         }
 
@@ -124,7 +118,7 @@
         public string GetWorkingDirectory(string hostname, string username, string passwd, string foldername) {
             using (var conn = new FtpClient(hostname, username, passwd)) {
                 conn.Connect();
-                return JsonConvert.SerializeObject(conn.GetWorkingDirectory());
+                return SetReturnValue(conn.GetWorkingDirectory(), string.Empty);
             }
         }
 
@@ -152,49 +146,28 @@
                 ftp.Connect();
 
                 // download a file
-                FtpStatus res = ftp.DownloadFile(string.Format(this.LocalFolder, filename), filename);
+                FtpStatus res = ftp.DownloadFile(Path.Combine(this.LocalFolder, filename), filename, FtpLocalExists.Overwrite);
+
                 return res.IsSuccess();
             }
         }
 
         internal string GetListing(string hostname, string username, string passwd, string foldername) {
             using (var conn = new FtpClient(hostname, username, passwd)) {
-                const string FileTypeLbl = "F";
-                const string FolderTypeLbl = "D";
-
                 conn.Connect();
 
                 // get a recursive listing of the files & folders in a specific folder 
                 RootObject root = new RootObject {
-                    items = new List<FileItem>()
+                    items = new List<FtpListItem>()
                 };
 
-                foreach (var item in conn.GetListing(foldername, FtpListOption.AllFiles)) {
-                    switch (item.Type) {
-                        case FtpObjectType.Directory:
-                            FileItem folder = new FileItem {
-                                type = FolderTypeLbl,
-                                fullName = item.FullName,
-                                modified = conn.GetModifiedTime(item.FullName)
-                            };
-
-                            root.items.Add(folder);
-                            break;
-
-                        case FtpObjectType.File:
-                            FileItem file = new FileItem {
-                                type = FileTypeLbl,
-                                fullName = item.FullName,
-                                modified = conn.GetModifiedTime(item.FullName),
-                                fileSize = conn.GetFileSize(item.FullName)
-                            };
-
-                            root.items.Add(file);
-                            break;
-
-                        case FtpObjectType.Link:
-                            break;
+                foreach (var item in conn.GetListing(foldername, FtpListOption.AllFiles))
+                {
+                    if (item.Type == FtpObjectType.Link)
+                    {
+                        continue;
                     }
+                    root.items.Add(item);
                 }
                 return JsonConvert.SerializeObject(root);
             }
@@ -214,15 +187,20 @@
             this.RootFolder = Json.GetValue(RootFolderLbl).ToString();
             this.LocalFolder = Json.GetValue(LocalFolderLbl).ToString();
         }
+
+        internal string SetReturnValue(string ReturnValue, string ErrorMessage)
+        {
+            JObject jreturn = new JObject
+            {
+                { "returnValue", ReturnValue },
+                { "errorMessage", ErrorMessage }
+            };
+            return JsonConvert.SerializeObject(jreturn);
+        }
     }
 
-    internal class FileItem {
-        public string type { get; set; }
-        public string fullName { get; set; }
-        public DateTime modified { get; set; }
-        public long fileSize { get; set; }
-    }
+
     internal class RootObject {
-        public List<FileItem> items { get; set; }
+        public List<FtpListItem> items { get; set; }
     }
 }

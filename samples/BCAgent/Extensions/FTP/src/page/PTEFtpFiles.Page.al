@@ -17,6 +17,7 @@ page 50125 PTEFtpFiles
                 field(FolderName; Rec.Name)
                 {
                     ApplicationArea = All;
+                    ToolTip = 'Specifies the file/folder name';
                     Caption = 'Name';
                     Editable = false;
                     DrillDown = true;
@@ -31,6 +32,7 @@ page 50125 PTEFtpFiles
                 field(Size; Rec.Value)
                 {
                     ApplicationArea = All;
+                    ToolTip = 'Specifies the file size';
                     Caption = 'Size';
                     Editable = false;
                 }
@@ -74,8 +76,8 @@ page 50125 PTEFtpFiles
         CurrentFolder: Text;
         RootFolder: Text;
         StyleTxt: Text;
-        NameLbl: Label 'fullName';
-        SizeLbl: Label 'fileSize';
+        NameLbl: Label 'FullName';
+        SizeLbl: Label 'Size';
         UpLevelLbl: Label '..';
         ZeroSizeLbl: Label '0';
 
@@ -147,6 +149,7 @@ page 50125 PTEFtpFiles
     local procedure InsertNameValue(JToken: JsonToken; Id: Integer)
     var
         JObject: JsonObject;
+        ZeroLbl: Label '0';
     begin
         Rec.Init();
         Rec.ID := Id;
@@ -156,11 +159,10 @@ page 50125 PTEFtpFiles
         if JObject.Get(NameLbl, JToken) then
             Rec.Name := CopyStr(JToken.AsValue().AsText(), 1, MaxStrLen(Rec.Name));
 
+        Rec.Value := ZeroLbl;
         if JObject.Get(SizeLbl, JToken) then
-            Rec.Value := Format(JToken.AsValue().AsInteger());
-
-        if JObject.Get(SizeLbl, JToken) then
-            Rec.Value := Format(JToken.AsValue().AsInteger());
+            if JToken.AsValue().AsInteger() > 0 then
+                Rec.Value := Format(JToken.AsValue().AsInteger());
 
         Rec.Insert(false);
     end;

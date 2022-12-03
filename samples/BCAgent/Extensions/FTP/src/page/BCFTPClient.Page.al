@@ -3,7 +3,8 @@
 /// </summary>
 page 50124 PTEBCFTPClient
 {
-    Caption = 'BC FTP Client';
+    Caption = 'FTP Client';
+    AdditionalSearchTerms = 'BC FTP';
     UsageCategory = Administration;
     ApplicationArea = All;
     PageType = Document;
@@ -22,6 +23,7 @@ page 50124 PTEBCFTPClient
                 field(FtpHost; FtpHost)
                 {
                     Caption = 'FTP Host';
+                    ToolTip = 'Specifies the FTP Host to use.';
                     ApplicationArea = All;
                     TableRelation = PTEBCFtpHost;
 
@@ -35,12 +37,14 @@ page 50124 PTEBCFTPClient
                 field(FtpFolder; FtpFolder)
                 {
                     Caption = 'FTP Folder';
+                    ToolTip = 'Specifies the FTP Host Folder to use.';
                     ApplicationArea = All;
                 }
 
                 field(LocalFolder; LocalFolder)
                 {
                     Caption = 'Local Folder';
+                    ToolTip = 'Specifies the Local Folder to use.';
                     ApplicationArea = All;
                 }
             }
@@ -53,6 +57,7 @@ page 50124 PTEBCFTPClient
                 {
                     ApplicationArea = All;
                     Caption = 'FTP Response';
+                    ToolTip = 'Specifies the response from last Ftp command.';
                     MultiLine = true;
                 }
             }
@@ -74,6 +79,7 @@ page 50124 PTEBCFTPClient
             {
                 ApplicationArea = All;
                 Caption = 'Connect';
+                ToolTip = 'Connect to the selected FTP Host.';
                 Image = Continue;
                 Promoted = true;
                 PromotedOnly = true;

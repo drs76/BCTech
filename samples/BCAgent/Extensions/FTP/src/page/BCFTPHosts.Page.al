@@ -4,7 +4,7 @@
 page 50134 PTEBCFTPHosts
 {
     ApplicationArea = All;
-    Caption = 'PTEBCFTPHosts';
+    Caption = 'FTP Hosts';
     PageType = List;
     SourceTable = PTEBCFtpHost;
     UsageCategory = Administration;

@@ -33,6 +33,7 @@ codeunit 50124 PTEBCFTP
     begin
         JSettings.WriteTo(SettingsString);
         ServiceBusRelay.Get(BuildRequest(ConnectFtpTok, SettingsString), Result);
+        Result := GetResult(Result);
     end;
 
     /// <summary>
@@ -47,6 +48,7 @@ codeunit 50124 PTEBCFTP
     begin
         JSettings.WriteTo(SettingsString);
         ServiceBusRelay.Get(BuildRequest(GetFileListFtpTok, SettingsString, Foldername), Result);
+        Result := GetResult(Result);
     end;
 
     /// <summary>
@@ -61,6 +63,7 @@ codeunit 50124 PTEBCFTP
     begin
         JSettings.WriteTo(SettingsString);
         ServiceBusRelay.Get(BuildRequest(DownloadFileFtpTok, SettingsString, FileName), Result);
+        Result := GetResult(Result);
     end;
 
     /// <summary>
@@ -75,6 +78,7 @@ codeunit 50124 PTEBCFTP
     begin
         JSettings.WriteTo(SettingsString);
         ServiceBusRelay.Get(BuildRequest(SetWorkingDirectoryFtpTok, SettingsString, FolderName), Result);
+        Result := GetResult(Result);
     end;
 
     /// <summary>
@@ -88,6 +92,7 @@ codeunit 50124 PTEBCFTP
     begin
         JSettings.WriteTo(SettingsString);
         ServiceBusRelay.Get(BuildRequest(GetWorkDirectoryFtpTok, SettingsString), Result);
+        Result := GetResult(Result);
     end;
 
     /// <summary>
@@ -119,5 +124,35 @@ codeunit 50124 PTEBCFTP
     local procedure BuildRequest(Method: Text; SettingsString: Text; Foldername: Text): Text
     begin
         exit(StrSubStno(CombineTxt, FtpPluginNameTok, StrSubstNo(Method, SettingsString, Foldername)));
+    end;
+
+    local procedure GetResult(JsonResult: Text) Result: Text
+    var
+        JObject: JsonObject;
+        JToken: JsonToken;
+        ResultValueLbl: Label 'returnValue';
+        ErrorMessageLbl: Label 'errorMessage';
+    begin
+        JObject.ReadFrom(JsonResult);
+
+        // check for error first
+        if JObject.Get(ErrorMessageLbl, JToken) then
+            if StrLen(JToken.AsValue().AsText()) > 0 then
+                Error(JToken.AsValue().AsText());
+
+        if not JObject.Get(ResultValueLbl, JToken) then
+            exit;
+
+        if JToken.IsArray() then
+            JToken.WriteTo(Result);
+
+        if JToken.IsObject() then
+            JToken.WriteTo(Result);
+
+        if JToken.IsObject() then
+            JToken.WriteTo(Result);
+
+        if JToken.IsValue() then
+            exit(JToken.AsValue().AsText());
     end;
 }
