@@ -20,7 +20,7 @@ codeunit 50124 PTEBCFTPManagement
     /// </summary>
     /// <param name="JSettings">JsonObject.</param>
     /// <returns>Return variable Result of type Text.</returns>
-    procedure Connect(JSettings: JsonObject) Result: Text
+    internal procedure Connect(JSettings: JsonObject) Result: Text
     var
         SettingsString: Text;
     begin
@@ -35,7 +35,7 @@ codeunit 50124 PTEBCFTPManagement
     /// <param name="JSettings">JsonObject.</param>
     /// <param name="FolderName">Text.</param>
     /// <returns>Return variable Result of type Text.</returns>
-    procedure GetFilesList(JSettings: JsonObject; FolderName: Text) Result: Text
+    internal procedure GetFilesList(JSettings: JsonObject; FolderName: Text) Result: Text
     var
         SettingsString: Text;
     begin
@@ -50,7 +50,7 @@ codeunit 50124 PTEBCFTPManagement
     /// <param name="JSettings">JsonObject.</param>
     /// <param name="FileName">Text.</param>
     /// <returns>Return variable Result of type Text.</returns>
-    procedure DownLoadFile(JSettings: JsonObject; FileName: Text) Result: Text
+    internal procedure DownLoadFile(JSettings: JsonObject; FileName: Text) Result: Text
     var
         SettingsString: Text;
     begin
@@ -65,7 +65,7 @@ codeunit 50124 PTEBCFTPManagement
     /// <param name="JSettings">JsonObject.</param>
     /// <param name="FolderName">Text.</param>
     /// <returns>Return variable Result of type Text.</returns>
-    procedure DownLoadFolder(JSettings: JsonObject; FolderName: Text) Result: Text
+    internal procedure DownLoadFolder(JSettings: JsonObject; FolderName: Text) Result: Text
     var
         SettingsString: Text;
     begin
@@ -80,7 +80,7 @@ codeunit 50124 PTEBCFTPManagement
     /// <param name="JSettings">JsonObject.</param>
     /// <param name="FolderName">Text.</param>
     /// <returns>Return variable Result of type Text.</returns>
-    procedure SetWorkingDirectory(JSettings: JsonObject; FolderName: Text) Result: Text
+    internal procedure SetWorkingDirectory(JSettings: JsonObject; FolderName: Text) Result: Text
     var
         SettingsString: Text;
     begin
@@ -94,7 +94,7 @@ codeunit 50124 PTEBCFTPManagement
     /// </summary>
     /// <param name="JSettings">JsonObject.</param>
     /// <returns>Return variable Result of type Text.</returns>
-    procedure GetWorkingDirectory(JSettings: JsonObject) Result: Text
+    internal procedure GetWorkingDirectory(JSettings: JsonObject) Result: Text
     var
         SettingsString: Text;
     begin
@@ -102,7 +102,6 @@ codeunit 50124 PTEBCFTPManagement
         ServiceBusRelay.Get(BuildRequest(GetWorkDirectoryFtpTok, SettingsString), Result);
         Result := GetResult(Result);
     end;
-
 
     local procedure BuildRequest(Method: Text; SettingsString: Text): Text
     begin

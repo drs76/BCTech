@@ -1,9 +1,9 @@
 /// <summary>
-/// Page PTEFtpFiles (ID 50125).
+/// Page PTEBCFtpFiles (ID 50125).
 /// </summary>
-page 50125 PTEFtpFiles
+page 50125 PTEBCFtpFiles
 {
-    Caption = 'PTEFtpFiles';
+    Caption = 'Ftp Files';
     PageType = ListPart;
     SourceTable = "Name/Value Buffer";
     SourceTableTemporary = true;
@@ -188,22 +188,18 @@ page 50125 PTEFtpFiles
 
     local procedure NavigateUp()
     var
-        TempRegExMatches: Record Matches temporary;
         BCFtp: Codeunit PTEBCFTPManagement;
-        RegExp: Codeunit Regex;
+        BCFtpClientMgt: Codeunit PTEBCFtpClientMgt;
         JToken: JsonToken;
-        RegExpLbl: Label '^(.*[\\\/])';
+        FwdSlashLbl: Label '/';
+        BackSlashLbl: Label '\';
     begin
-        if CurrentFolder <> RootFolder then begin
-            RegExp.Match(CurrentFolder, RegExpLbl, TempRegExMatches);
-            if TempRegExMatches.IsEmpty() then
-                exit;
+        if CurrentFolder <> RootFolder then
+            BCFtpClientMgt.TextFromLastSlash(CurrentFolder);
 
-            TempRegExMatches.FindFirst();
-            CurrentFolder := TempRegExMatches.ReadValue();
-        end;
-        if CurrentFolder.EndsWith('/') or CurrentFolder.EndsWith('\') then
+        if CurrentFolder.EndsWith(FwdSlashLbl) or CurrentFolder.EndsWith(BackSlashLbl) then
             CurrentFolder := CopyStr(CurrentFolder, 1, StrLen(CurrentFolder) - 1);
+
         JToken.ReadFrom(BCFtp.GetFilesList(JSettings, CurrentFolder));
         if not JToken.AsObject().Get(ItemsLbl, JToken) then
             exit;
@@ -243,5 +239,4 @@ page 50125 PTEFtpFiles
         else
             NavigateDown();
     end;
-
 }

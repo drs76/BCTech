@@ -16,7 +16,7 @@ codeunit 50133 PTEBCFtpHostMgt
     /// <param name="Host">VAR Text.</param>
     /// <param name="Usr">VAR Text.</param>
     /// <param name="Pwd">VAR Text.</param>
-    procedure UpdateHostDetails(FtpName: Text; Host: Text; Usr: Text; Pwd: Text)
+    internal procedure UpdateHostDetails(FtpName: Text; Host: Text; Usr: Text; Pwd: Text)
     var
         JObject: JsonObject;
     begin
@@ -34,7 +34,7 @@ codeunit 50133 PTEBCFtpHostMgt
     /// <param name="Host">VAR Text.</param>
     /// <param name="Usr">VAR Text.</param>
     /// <param name="Pwd">VAR Text.</param>
-    procedure GetHostDetails(FtpName: Text; var Host: Text; var Usr: Text; var Pwd: Text)
+    internal procedure GetHostDetails(FtpName: Text; var Host: Text; var Usr: Text; var Pwd: Text)
     var
         JObject: JsonObject;
         JToken: JsonToken;
@@ -61,7 +61,7 @@ codeunit 50133 PTEBCFtpHostMgt
     /// </summary>
     /// <param name="FtpName">Text.</param>
     /// <param name="JObject">VAR JsonObject.</param>
-    procedure GetHostDetails(FtpName: Text; var JObject: JsonObject)
+    internal procedure GetHostDetails(FtpName: Text; var JObject: JsonObject)
     var
         KeyValue: Text;
     begin
@@ -76,11 +76,28 @@ codeunit 50133 PTEBCFtpHostMgt
     /// DeleteHostDetails.
     /// </summary>
     /// <param name="FtpName">Text.</param>
-    procedure DeleteHostDetails(FtpName: Text)
+    internal procedure DeleteHostDetails(FtpName: Text)
     begin
         if IsolatedStorage.Contains(FtpName, DataScope::Company) then
             IsolatedStorage.Delete(FtpName, DataScope::Company);
     end;
+
+    /// <summary>
+    /// GetHostName.
+    /// </summary>
+    /// <param name="JSettings">JsonObject.</param>
+    /// <returns>Return value of type Text.</returns>
+    internal procedure GetHostName(JSettings: JsonObject): Text
+    var
+        JToken: JsonToken;
+    begin
+        if not JSettings.Contains(HostnameLbl) then
+            exit;
+
+        JSettings.Get(HostnameLbl, JToken);
+        exit(JToken.AsValue().AsText());
+    end;
+
 
     local procedure UpdateObject(var JObject: JsonObject; Name: Text; Value: Variant)
     var
@@ -111,6 +128,5 @@ codeunit 50133 PTEBCFtpHostMgt
     begin
         JObject.WriteTo(KeyValue);
         IsolatedStorage.Set(FtpName, KeyValue, DataScope::Company);
-
     end;
 }

@@ -55,7 +55,7 @@ page 50124 PTEBCFTPClient
                 }
             }
 
-            part(BCFtpFiles; PTEFtpFiles)
+            part(BCFtpFiles; PTEBCFtpFiles)
             {
                 Editable = false;
                 ApplicationArea = All;
@@ -153,6 +153,19 @@ page 50124 PTEBCFTPClient
 
                     RunObject = Page PTEBCFTPHosts;
                 }
+            }
+
+            action(Files)
+            {
+                Caption = 'Downloaded Files';
+                ToolTip = 'View files downloaded by the ftp client.';
+                ApplicationArea = All;
+                Image = Documents;
+                Promoted = true;
+                PromotedCategory = Process;
+                PromotedOnly = true;
+
+                RunObject = Page PTEBCFtpDownloadedFiles;
             }
         }
     }
