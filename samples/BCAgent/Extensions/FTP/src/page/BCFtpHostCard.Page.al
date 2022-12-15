@@ -70,18 +70,6 @@ page 50135 PTEBCFtpHostCard
                         FtpHostMgt.UpdateHostDetails(Rec.Name, FtpHost, FtpUser, FtpPasswd);
                     end;
                 }
-
-                field(LocalFolder; Rec.LocalFolder)
-                {
-                    Caption = 'FTP Local Folder';
-                    ToolTip = 'Specifies the default Local Folder';
-                    ApplicationArea = All;
-
-                    trigger OnValidate()
-                    begin
-                        FtpHostMgt.UpdateHostDetails(Rec.Name, FtpHost, FtpUser, FtpPasswd);
-                    end;
-                }
             }
         }
     }

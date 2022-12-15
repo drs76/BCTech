@@ -1,22 +1,15 @@
 /// <summary>
-/// Codeunit PTEBCFTP (ID 50130).
+/// Codeunit PTEBCFTPManagement (ID 50130).
 /// </summary>
-codeunit 50124 PTEBCFTP
+codeunit 50124 PTEBCFTPManagement
 {
     var
         ServiceBusRelay: codeunit AzureServiceBusRelay;
-        Host: Text;
-        Usr: Text;
-        Pwd: Text;
-        RootFolder: Text;
-        HostnameLbl: Label 'hostName';
-        UsernameLbl: Label 'userName';
-        PasswdLbl: Label 'passwd';
-        RootFolderLbl: Label 'rootFolder';
         FtpPluginNameTok: Label '/ftp/V1.0', Locked = true;
         ConnectFtpTok: Label '/ConnectFtp?jsonsettings=%1', Locked = true, Comment = '%1 - JSettings';
         GetFileListFtpTok: Label '/GetFilesFtp?jsonsettings=%1&foldername=%2', Locked = true, Comment = '%1 - JSettings, %2 - Foldername';
         DownloadFileFtpTok: Label '/DownloadFileFtp?jsonsettings=%1&filename=%2', Locked = true, Comment = '%1 - JSettings, %2 - Filename';
+        DownloadFolderFtpTok: Label '/DownloadFolderFtp?jsonsettings=%1&foldername=%2', Locked = true, Comment = '%1 - JSettings, %2 - Foldername';
         GetWorkDirectoryFtpTok: Label '/GetWorkingDirectoryFtp?jsonsettings=%1', Locked = true, Comment = '%1 - JSettings';
         SetWorkingDirectoryFtpTok: Label '/SetWorkingDirectoryFtp?jsonsettings=%1&foldername=%2', Locked = true, Comment = '%1 - JSettings, %2 - Foldername';
         CombineTxt: Label '%1%2', Comment = '%1 - String1, %2 - String2';
@@ -67,6 +60,21 @@ codeunit 50124 PTEBCFTP
     end;
 
     /// <summary>
+    /// DownLoadFolder.
+    /// </summary>
+    /// <param name="JSettings">JsonObject.</param>
+    /// <param name="FolderName">Text.</param>
+    /// <returns>Return variable Result of type Text.</returns>
+    procedure DownLoadFolder(JSettings: JsonObject; FolderName: Text) Result: Text
+    var
+        SettingsString: Text;
+    begin
+        JSettings.WriteTo(SettingsString);
+        ServiceBusRelay.Get(BuildRequest(DownloadFolderFtpTok, SettingsString, FolderName), Result);
+        Result := GetResult(Result);
+    end;
+
+    /// <summary>
     /// SetWorkingDirectory.
     /// </summary>
     /// <param name="JSettings">JsonObject.</param>
@@ -95,26 +103,6 @@ codeunit 50124 PTEBCFTP
         Result := GetResult(Result);
     end;
 
-    /// <summary>
-    /// SettingsToVars.
-    /// </summary>
-    /// <param name="JSettings">JsonObject.</param>
-    procedure SettingsToVars(JSettings: JsonObject)
-    var
-        JToken: JsonToken;
-    begin
-        if JSettings.Get(HostNameLbl, JToken) then
-            Host := JToken.AsValue().AsText();
-
-        if JSettings.Get(UsernameLbl, JToken) then
-            Usr := JToken.AsValue().AsText();
-
-        if JSettings.Get(PasswdLbl, JToken) then
-            Pwd := JToken.AsValue().AsText();
-
-        if JSettings.Get(RootFolderLbl, JToken) then
-            RootFolder := JToken.AsValue().AsText();
-    end;
 
     local procedure BuildRequest(Method: Text; SettingsString: Text): Text
     begin

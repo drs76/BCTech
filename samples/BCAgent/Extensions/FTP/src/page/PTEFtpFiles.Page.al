@@ -80,6 +80,7 @@ page 50125 PTEFtpFiles
         SizeLbl: Label 'Size';
         UpLevelLbl: Label '..';
         ZeroSizeLbl: Label '0';
+        ItemsLbl: Label 'Items';
 
 
     /// <summary>
@@ -100,7 +101,7 @@ page 50125 PTEFtpFiles
     /// SetSource.
     /// </summary>
     /// <param name="NewSource">JsonArray.</param>
-    procedure SetSource(NewSource: JsonArray)
+    internal procedure SetSource(NewSource: JsonArray)
     var
         JToken: JsonToken;
     begin
@@ -114,18 +115,38 @@ page 50125 PTEFtpFiles
     end;
 
     /// <summary>
+    /// DownloadFolder.
+    /// </summary>
+    internal procedure DownloadFolder()
+    var
+        BCFtpMgt: Codeunit PTEBCFTPManagement;
+        Compress: Codeunit "Data Compression";
+        TempBlob: Codeunit "Temp Blob";
+        Base64: Codeunit "Base64 Convert";
+        WriteStream: OutStream;
+        ReadStream: InStream;
+        Response: Text;
+        Filename: Text;
+    begin
+        if (Rec.Value <> ZeroSizeLbl) or (Rec.Name = UpLevelLbl) then
+            exit;
+
+        Response := BCFtpMgt.DownLoadFolder(JSettings, Rec.Name);
+        TempBlob.CreateOutStream(WriteStream);
+        Base64.FromBase64(Response, WriteStream);
+        TempBlob.CreateInStream(ReadStream);
+
+        Filename := Rec.Name + '.zip';
+        DownloadFromStream(ReadStream, 'Zippity Zip', '', '', Filename);
+    end;
+
+    /// <summary>
     /// DownloadFiles.
     /// </summary>
-    procedure DownloadFiles()
+    internal procedure DownloadFiles()
     var
         TempNameValueBuffer: Record "Name/Value Buffer" temporary;
-        BCFtp: Codeunit PTEBCFTP;
-        Base64: Codeunit "Base64 Convert";
-        TempBlob: Codeunit "Temp Blob";
-        ReadStream: InStream;
-        WriteStream: OutStream;
-        FileContent: Text;
-        ToFileName: Text;
+        BCFtpClientMgt: Codeunit PTEBCFtpClientMgt;
     begin
         if (Rec.Value = ZeroSizeLbl) or (Rec.Name = UpLevelLbl) then
             exit;
@@ -133,17 +154,7 @@ page 50125 PTEFtpFiles
         TempNameValueBuffer.Copy(Rec, true);
 
         CurrPage.SetSelectionFilter(TempNameValueBuffer);
-        if TempNameValueBuffer.FindSet() then
-            repeat
-                //TODO: Note failures.
-                FileContent := BCFtp.DownLoadFile(JSettings, TempNameValueBuffer.Name);
-                if StrLen(FileContent) > 0 then begin
-                    TempBlob.CreateOutStream(WriteStream, TextEncoding::UTF8);
-                    WriteStream.WriteText(Base64.FromBase64(FileContent));
-                    TempBlob.CreateInStream(ReadStream);
-                    DownloadFromStream(ReadStream, 'Download FTP File', '', '', ToFIleName);
-                end;
-            until TempNameValueBuffer.Next() = 0;
+        BCFtpClientMgt.DownloadFiles(JSettings, TempNameValueBuffer);
     end;
 
     local procedure InsertNameValue(JToken: JsonToken; Id: Integer)
@@ -178,7 +189,7 @@ page 50125 PTEFtpFiles
     local procedure NavigateUp()
     var
         TempRegExMatches: Record Matches temporary;
-        BCFtp: Codeunit PTEBCFTP;
+        BCFtp: Codeunit PTEBCFTPManagement;
         RegExp: Codeunit Regex;
         JToken: JsonToken;
         RegExpLbl: Label '^(.*[\\\/])';
@@ -194,7 +205,7 @@ page 50125 PTEFtpFiles
         if CurrentFolder.EndsWith('/') or CurrentFolder.EndsWith('\') then
             CurrentFolder := CopyStr(CurrentFolder, 1, StrLen(CurrentFolder) - 1);
         JToken.ReadFrom(BCFtp.GetFilesList(JSettings, CurrentFolder));
-        if not JToken.AsObject().Get('items', JToken) then
+        if not JToken.AsObject().Get(ItemsLbl, JToken) then
             exit;
 
         SetSource(JToken.AsArray());
@@ -202,11 +213,11 @@ page 50125 PTEFtpFiles
 
     local procedure NavigateDown()
     var
-        BCFtp: Codeunit PTEBCFTP;
+        BCFtp: Codeunit PTEBCFTPManagement;
         JToken: JsonToken;
     begin
         JToken.ReadFrom(BCFtp.GetFilesList(JSettings, Rec.Name));
-        if not JToken.AsObject().Get('items', JToken) then
+        if not JToken.AsObject().Get(ItemsLbl, JToken) then
             exit;
 
         CurrentFolder := Rec.Name;

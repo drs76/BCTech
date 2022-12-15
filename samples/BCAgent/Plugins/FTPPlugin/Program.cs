@@ -2,6 +2,7 @@
 
     using FluentFTP;
     using FluentFTP.Helpers;
+    using FluentFTP.Rules;
     using Microsoft.Dynamics.BusinessCentral.Agent.Common;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
@@ -9,6 +10,9 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.IO.Compression;
+    using System.IO.Pipes;
+    using System.Linq;
 
     [AgentPlugin("ftp/V1.0")]
     public class FTPPlugin : IAgentPlugin {
@@ -16,158 +20,119 @@
         protected string UserName { get; set; }
         protected string Passwd { get; set; }
         protected string RootFolder { get; set; }
-        protected string LocalFolder { get; set; }
 
 
         [PluginMethod("GET")]
         public string ConnectFtp(string jsonsettings) {
-            string returnval = string.Empty;
             SetSettings(jsonsettings);
-
-            try {
-                Connect(this.HostName, this.UserName, this.Passwd);
-                return SetReturnValue(true.ToString(), string.Empty);
-            }
-            catch (Exception ex) {
-                return SetReturnValue(string.Empty, string.Format("Error connecting:,{0}", ex.Message));
-            }
+            return SetReturnValue(JsonConvert.SerializeObject(Connect()), string.Empty);
         }
 
         [PluginMethod("GET")]
         public string GetFilesFtp(string jsonsettings, string foldername) {
-            string returnval = string.Empty;
             SetSettings(jsonsettings);
-
-            try {
-                return SetReturnValue(GetListing(this.HostName, this.UserName, this.Passwd, foldername).ToString(), string.Empty);
-            }
-            catch (Exception ex) {
-
-                return SetReturnValue(string.Empty, JsonConvert.SerializeObject(string.Format("Error getting files:\n,{0}", ex.Message)));
-            }
+            return SetReturnValue(GetListing(foldername).ToString(), string.Empty);
         }
 
         [PluginMethod("GET")]
         public string DownloadFolderFtp(string jsonsettings, string foldername) {
-            string returnval = string.Empty;
             SetSettings(jsonsettings);
-
-            try {
-                return SetReturnValue(Convert.ToString(DownloadDirectory(this.HostName, this.UserName, this.Passwd, foldername)), string.Empty);
-            }
-            catch (Exception ex) {
-                return SetReturnValue(string.Empty, string.Format("Error downloading folders:\n,{0}", ex.Message));
-            }
+            return SetReturnValue(Convert.ToString(DownloadDirectory(foldername)), string.Empty);
         }
 
         [PluginMethod("GET")]
         public string SetWorkingDirectoryFtp(string jsonsettings, string foldername) {
-            string returnval = string.Empty;
             SetSettings(jsonsettings);
-
-            try {
-                SetWorkingDirectory(this.HostName, this.UserName, this.Passwd, foldername);
-                return (SetReturnValue(string.Empty, string.Empty));
-            }
-            catch (Exception ex) {
-                return SetReturnValue(string.Empty, string.Format("Error downloading folders:\n,{0}", ex.Message));
-            }
-        }
-
-        [PluginMethod("GET")]
-        public string DownloadDirectoryFtp(string jsonsettings, string foldername) {
-            string returnval = string.Empty;
-            SetSettings(jsonsettings);
-
-            try {
-                return SetReturnValue(JsonConvert.SerializeObject(DownloadDirectory(this.HostName, this.UserName, this.Passwd, foldername)), string.Empty);
-            }
-            catch (Exception ex) {
-                return SetReturnValue(string.Empty, string.Format("Error downloading folders:\n,{0}", ex.Message)); 
-            }
+            SetWorkingDirectory(foldername);
+            return (SetReturnValue(string.Empty, string.Empty));
         }
 
         [PluginMethod("GET")]
         public string DownloadFileFtp(string jsonsettings, string filename) {
-            string returnval = string.Empty;
             SetSettings(jsonsettings);
-            
-            try {
-                if (!DownloadFile(this.HostName, this.UserName, this.Passwd, filename)) {
-                    return SetReturnValue(string.Empty, "Download failed.");
-                }
-                else {
-                    Byte[] bytes = File.ReadAllBytes(Path.Combine(this.LocalFolder, filename));
-                    return SetReturnValue(Convert.ToBase64String(bytes), string.Empty);
-                }
-            }
-            catch (Exception ex) {
-                return SetReturnValue(string.Empty,ex.Message); 
-            }
+            return DownloadFileBytes(filename);
         }
 
         [PluginMethod("GET")]
-        public void SetWorkingDirectory(string hostname, string username, string passwd, string foldername) {
-            using (var conn = new FtpClient(hostname, username, passwd)) {
+        public void SetWorkingDirectory(string foldername) {
+            using (var conn = new FtpClient(this.HostName, this.UserName, this.Passwd)) {
                 conn.Connect();
                 conn.SetWorkingDirectory(foldername);
             }
         }
 
         [PluginMethod("GET")]
-        public string GetWorkingDirectory(string hostname, string username, string passwd, string foldername) {
-            using (var conn = new FtpClient(hostname, username, passwd)) {
+        public string GetWorkingDirectory(string foldername) {
+            using (var conn = new FtpClient(this.HostName, this.UserName, this.Passwd)) {
                 conn.Connect();
                 return SetReturnValue(conn.GetWorkingDirectory(), string.Empty);
             }
         }
 
-        internal static void Connect(string hostname, string username, string passwd) {
-            using (var conn = new FtpClient(hostname, username, passwd)) {
+        internal string Connect() {
+            const string ConnectedLbl = "Connected.";
+            using (var conn = new FtpClient(this.HostName, this.UserName, this.Passwd)) {
                 conn.Connect();
+                return SetReturnValue(ConnectedLbl, string.Empty);
             }
         }
 
-        internal bool DownloadDirectory(string hostname, string username, string passwd, string foldername) {
-            using (var ftp = new FtpClient(hostname, username, passwd)) {
+        internal string DownloadDirectory(string foldername) {
+            byte[] zipFile;
+            using (var ftp = new FtpClient(this.HostName, this.UserName, this.Passwd)) {
+                ftp.Connect();
+                ftp.SetWorkingDirectory(foldername);
+
+                using (MemoryStream zipStream = new MemoryStream()) {
+                    using (ZipArchive zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Create, true)) {
+                        foreach (var item in ftp.GetListing(foldername, FtpListOption.AllFiles)) {
+                            if (item.Type == FtpObjectType.File) {
+                                var entry = zipArchive.CreateEntry(item.Name, CompressionLevel.Fastest);
+                                using (Stream entryStream = entry.Open())
+                                using (BinaryWriter zipFileBinarywriter = new BinaryWriter(entryStream)) {
+                                    if (ftp.DownloadBytes(out byte[] ftpFile, item.FullName)) {
+                                        zipFileBinarywriter.Write(ftpFile);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    zipStream.Seek(0, SeekOrigin.Begin);
+                    zipFile = zipStream.ToArray();
+                }
+            }
+            return Convert.ToBase64String(zipFile.ToArray());
+        }
+
+        internal string DownloadFileBytes(string filename) {
+            const string FailedToDownloadErr = "Failed to download {0}";
+
+            using (var ftp = new FtpClient(this.HostName, this.UserName, this.Passwd)) {
                 ftp.Connect();
 
-                // download a folder and all its files
-                ftp.DownloadDirectory(this.LocalFolder, foldername, FtpFolderSyncMode.Update);
-
-                // download a folder and all its files, and delete extra files on disk
-                //List<FtpResult> result = ftp.DownloadDirectory(@"C:\temp\", foldername, FtpFolderSyncMode.Mirror);
-                return false;
+                // download a file bytes
+                bool res = ftp.DownloadBytes(out byte[] ftpFile, filename);
+                if (!res) {
+                    return SetReturnValue(string.Empty, string.Format(FailedToDownloadErr, filename));
+                }
+                return SetReturnValue(Convert.ToBase64String(ftpFile), string.Empty);
             }
         }
 
-        internal Boolean DownloadFile(string hostname, string username, string passwd, string filename) {
-            using (var ftp = new FtpClient(hostname, username, passwd)) {
+        internal string GetListing(string foldername) {
+            using (var ftp = new FtpClient(this.HostName, this.UserName, this.Passwd)) {
                 ftp.Connect();
-
-                // download a file
-                FtpStatus res = ftp.DownloadFile(Path.Combine(this.LocalFolder, filename), filename, FtpLocalExists.Overwrite);
-
-                return res.IsSuccess();
-            }
-        }
-
-        internal string GetListing(string hostname, string username, string passwd, string foldername) {
-            using (var conn = new FtpClient(hostname, username, passwd)) {
-                conn.Connect();
 
                 // get a recursive listing of the files & folders in a specific folder 
-                RootObject root = new RootObject {
-                    items = new List<FtpListItem>()
+                RootObject root = new RootObject() {
+                    Items = new List<FtpListItem>()
                 };
 
-                foreach (var item in conn.GetListing(foldername, FtpListOption.AllFiles))
-                {
-                    if (item.Type == FtpObjectType.Link)
-                    {
+                foreach (var item in ftp.GetListing(foldername, FtpListOption.AllFiles)) {
+                    if (item.Type == FtpObjectType.Link) {
                         continue;
                     }
-                    root.items.Add(item);
+                    root.Items.Add(item);
                 }
                 return JsonConvert.SerializeObject(root);
             }
@@ -178,29 +143,22 @@
             const string UserNameLbl = "userName";
             const string PasswdLbl = "passwd";
             const string RootFolderLbl = "rootFolder";
-            const string LocalFolderLbl = "localFolder";
 
             JObject Json = JObject.Parse(JsonString);
             this.HostName = Json.GetValue(HostNameLbl).ToString();
             this.UserName = Json.GetValue(UserNameLbl).ToString();
             this.Passwd = Json.GetValue(PasswdLbl).ToString();
             this.RootFolder = Json.GetValue(RootFolderLbl).ToString();
-            this.LocalFolder = Json.GetValue(LocalFolderLbl).ToString();
         }
 
-        internal string SetReturnValue(string ReturnValue, string ErrorMessage)
-        {
-            JObject jreturn = new JObject
-            {
-                { "returnValue", ReturnValue },
-                { "errorMessage", ErrorMessage }
-            };
+        internal string SetReturnValue(string ReturnValue, string ErrorMessage) {
+            JObject jreturn = new JObject() { { "returnValue", ReturnValue }, { "errorMessage", ErrorMessage } };
             return JsonConvert.SerializeObject(jreturn);
         }
     }
 
 
     internal class RootObject {
-        public List<FtpListItem> items { get; set; }
+        public List<FtpListItem> Items { get; set; }
     }
 }

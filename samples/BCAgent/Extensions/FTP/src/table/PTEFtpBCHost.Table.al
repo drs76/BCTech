@@ -19,12 +19,6 @@ table 50135 PTEBCFtpHost
             Caption = 'Ftp Folder';
             DataClassification = CustomerContent;
         }
-
-        field(3; LocalFolder; Text[2048])
-        {
-            Caption = 'Local Folder';
-            DataClassification = CustomerContent;
-        }
     }
 
     keys

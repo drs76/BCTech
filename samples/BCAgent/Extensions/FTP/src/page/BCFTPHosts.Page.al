@@ -3,12 +3,12 @@
 /// </summary>
 page 50134 PTEBCFTPHosts
 {
-    ApplicationArea = All;
     Caption = 'FTP Hosts';
     PageType = List;
     SourceTable = PTEBCFtpHost;
-    UsageCategory = Administration;
+    UsageCategory = None;
     CardPageId = PTEBCFtpHostCard;
+    ModifyAllowed = false;
 
     layout
     {
@@ -16,8 +16,6 @@ page 50134 PTEBCFTPHosts
         {
             repeater(General)
             {
-                Editable = false;
-
                 field(Name; Rec.Name)
                 {
                     ApplicationArea = All;

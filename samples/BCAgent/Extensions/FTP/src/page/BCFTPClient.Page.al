@@ -11,6 +11,7 @@ page 50124 PTEBCFTPClient
     InsertAllowed = false;
     ModifyAllowed = true;
     DeleteAllowed = false;
+    PromotedActionCategories = 'New,,,Hosts,Ftp';
 
     layout
     {
@@ -29,22 +30,14 @@ page 50124 PTEBCFTPClient
 
                     trigger OnValidate()
                     begin
-                        SetHost();
+                        OnValidateHost();
                     end;
                 }
-
 
                 field(FtpFolder; FtpFolder)
                 {
                     Caption = 'FTP Folder';
                     ToolTip = 'Specifies the FTP Host Folder to use.';
-                    ApplicationArea = All;
-                }
-
-                field(LocalFolder; LocalFolder)
-                {
-                    Caption = 'Local Folder';
-                    ToolTip = 'Specifies the Local Folder to use.';
                     ApplicationArea = All;
                 }
             }
@@ -75,107 +68,131 @@ page 50124 PTEBCFTPClient
     {
         area(Processing)
         {
-            action(Connect)
+            group(Ftp)
             {
-                ApplicationArea = All;
-                Caption = 'Connect';
-                ToolTip = 'Connect to the selected FTP Host.';
-                Image = Continue;
-                Promoted = true;
-                PromotedOnly = true;
-                PromotedCategory = Process;
+                Caption = 'Ftp';
+                action(Connect)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Connect';
+                    ToolTip = 'Connect to the selected FTP Host.';
+                    Image = Continue;
+                    Promoted = true;
+                    PromotedOnly = true;
+                    PromotedCategory = Category5;
 
-                trigger OnAction()
-                begin
-                    FtpResponse := BCFtp.Connect(JSettings);
-                    CurrPage.Update(false);
-                end;
+                    trigger OnAction()
+                    var
+                        BCFtpMgt: Codeunit PTEBCFTPManagement;
+                    begin
+                        FtpResponse := BCFtpMgt.Connect(JSettings);
+                        CurrPage.Update(false);
+                    end;
+                }
+
+                action(GetFileList)
+                {
+                    ApplicationArea = All;
+                    Caption = 'File List';
+                    ToolTip = 'Get list of files on FTP server';
+                    Image = Continue;
+                    Promoted = true;
+                    PromotedOnly = true;
+                    PromotedCategory = Category5;
+
+                    trigger OnAction()
+                    begin
+                        GetFilesList();
+                    end;
+                }
+
+                action(DownloadFile)
+                {
+                    Caption = 'Download File';
+                    ToolTip = 'Download selected file(s)';
+                    ApplicationArea = All;
+                    Image = Download;
+                    Promoted = true;
+                    PromotedOnly = true;
+                    PromotedCategory = Category5;
+
+                    trigger OnAction()
+                    begin
+                        CurrPage.BCFtpFiles.Page.DownloadFiles();
+                    end;
+                }
+
+                action(DownloadDirectory)
+                {
+                    Caption = 'Download Folder';
+                    ToolTip = 'Download selected folder and its contents.';
+                    ApplicationArea = All;
+                    Image = Download;
+                    Promoted = true;
+                    PromotedCategory = Category5;
+                    PromotedOnly = true;
+
+                    trigger OnAction()
+                    begin
+                        CurrPage.BCFtpFiles.Page.DownloadFolder();
+                    end;
+                }
             }
-
-            action(GetFileList)
+            group(Hosts)
             {
-                ApplicationArea = All;
-                Caption = 'File List';
-                ToolTip = 'Get list of files on FTP server';
-                Image = Continue;
-                Promoted = true;
-                PromotedOnly = true;
-                PromotedCategory = Process;
+                Caption = 'Hosts';
+                action(HostList)
+                {
+                    Caption = 'Hosts';
+                    ToolTip = 'Maintain Ftp Hosts.';
+                    ApplicationArea = All;
+                    Image = Web;
+                    Promoted = true;
+                    PromotedCategory = Category4;
+                    PromotedOnly = true;
 
-                trigger OnAction()
-                var
-                    JToken: JsonToken;
-                    Source: JsonArray;
-                begin
-                    FtpResponse := BCFtp.GetFilesList(JSettings, FtpFolder);
-                    JToken.ReadFrom(FtpResponse);
-                    if not JToken.AsObject().Get('items', JToken) then
-                        exit;
-
-                    Source := JToken.AsArray();
-                    CurrPage.BCFtpFiles.Page.SetSource(Source);
-                    CurrPage.Update(false);
-                end;
-            }
-            action(DownloadFile)
-            {
-                Caption = 'Download';
-                ToolTip = 'Download selected file(s)';
-                ApplicationArea = All;
-                Image = Download;
-                Promoted = true;
-                PromotedOnly = true;
-                PromotedCategory = Process;
-
-                trigger OnAction()
-                begin
-                    CurrPage.BCFtpFiles.Page.DownloadFiles();
-                end;
+                    RunObject = Page PTEBCFTPHosts;
+                }
             }
         }
     }
 
     var
-        BCFtp: Codeunit PTEBCFTP;
+        BCFtpClientMgt: Codeunit PTEBCFtpClientMgt;
         JSettings: JsonObject;
         FtpHost: Text;
         FtpResponse: Text;
         FtpFolder: Text;
-        LocalFolder: Text;
-        RootFolderLbl: Label 'rootFolder';
-        LocalFolderLbl: Label 'localFolder';
 
 
     local procedure UpdateSettings()
     begin
-        if JSettings.Contains(RootFolderLbl) then
-            JSettings.Replace(rootFolderLbl, FtpFolder)
-        else
-            JSettings.Add(rootFolderLbl, FtpFolder);
-
-        if JSettings.Contains(LocalFolderLbl) then
-            JSettings.Replace(LocalFolderLbl, LocalFolder)
-        else
-            JSettings.Add(LocalFolderLbl, LocalFolder);
-
-        BCFTP.SettingsToVars(JSettings);
+        BCFtpClientMgt.UpdateClientPageSettings(JSettings, FtpFolder);
         CurrPage.BCFtpFiles.Page.SetSettings(JSettings);
     end;
 
-    local procedure SetHost()
+    local procedure OnValidateHost()
     var
         BCFtpHost: Record PTEBCFtpHost;
         FtpHostMgt: Codeunit PTEBCFtpHostMgt;
     begin
         Clear(JSettings);
         Clear(FtpFolder);
-        Clear(LocalFolder);
         if BCFtpHost.Get(FtpHost) then begin
             FtpHostMgt.GetHostDetails(FtpHost, JSettings);
             FtpFolder := BCFtpHost.RootFolder;
-            LocalFolder := BCFtpHost.LocalFolder;
             UpdateSettings();
         end;
         CurrPage.Update(false);
     end;
+
+    local procedure GetFilesList()
+    var
+        Source: JsonArray;
+    begin
+        Source := BCFtpClientMgt.GetFtpFolderFilesList(JSettings, FtpFolder);
+        CurrPage.BCFtpFiles.Page.SetSource(Source);
+        CurrPage.Update(false);
+    end;
+
 }
