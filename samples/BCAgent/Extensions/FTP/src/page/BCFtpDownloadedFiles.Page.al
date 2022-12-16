@@ -4,12 +4,13 @@
 page 50137 PTEBCFtpDownloadedFiles
 {
     ApplicationArea = All;
-    Caption = 'BC Ftp Downloaded Files';
+    Caption = 'Ftp Downloaded Files';
     PageType = List;
     SourceTable = PTEBCFTPDownloadedFile;
     UsageCategory = Administration;
     InsertAllowed = false;
     ModifyAllowed = false;
+    DeleteAllowed = true;
 
     layout
     {
@@ -17,47 +18,67 @@ page 50137 PTEBCFtpDownloadedFiles
         {
             repeater(General)
             {
-
-                field(Compressed; Rec.Compressed)
-                {
-                    ApplicationArea = All;
-                    ToolTip = 'Specifies the value of the Compressed field.';
-                }
+                Editable = false;
 
                 field(EntryNo; Rec.EntryNo)
                 {
                     ApplicationArea = All;
                     ToolTip = 'Specifies the value of the Entry No. field.';
-                }
 
-                field(FileContent; Rec.FileContent)
-                {
-                    ApplicationArea = All;
-                    ToolTip = 'Specifies the value of the File Content field.';
-                }
-
-                field(Filename; Rec.Filename)
-                {
-                    ApplicationArea = All;
-                    ToolTip = 'Specifies the value of the Filename field.';
-                }
-
-                field(FtpHost; Rec.FtpHost)
-                {
-                    ApplicationArea = All;
-                    ToolTip = 'Specifies the value of the Ftp Host field.';
-                }
-
-                field(Size; Rec.Size)
-                {
-                    ApplicationArea = All;
-                    ToolTip = 'Specifies the value of the Size field.';
+                    trigger OnDrillDown()
+                    begin
+                        DownloadDrillDown();
+                    end;
                 }
 
                 field(SystemCreatedAt; Rec.SystemCreatedAt)
                 {
                     ApplicationArea = All;
                     ToolTip = 'Specifies the value of the SystemCreatedAt field.';
+
+                    trigger OnDrillDown()
+                    begin
+                        DownloadDrillDown();
+                    end;
+                }
+
+                field(FtpHost; Rec.FtpHost)
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Specifies the value of the Ftp Host field.';
+
+                    trigger OnDrillDown()
+                    begin
+                        DownloadDrillDown();
+                    end;
+                }
+
+                field(Filename; Rec.Filename)
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Specifies the value of the Filename field.';
+
+                    trigger OnDrillDown()
+                    begin
+                        DownloadDrillDown();
+                    end;
+                }
+
+                field(Size; Rec.Size)
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Specifies the value of the Size field.';
+
+                    trigger OnDrillDown()
+                    begin
+                        DownloadDrillDown();
+                    end;
+                }
+
+                field(Compressed; Rec.Compressed)
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Specifies the value of the Compressed field.';
                 }
             }
         }
@@ -67,6 +88,23 @@ page 50137 PTEBCFtpDownloadedFiles
     {
         area(Processing)
         {
+            action(View)
+            {
+                Caption = 'View';
+                ToolTip = 'View file contents.';
+                ApplicationArea = All;
+                Image = View;
+                Promoted = true;
+                PromotedCategory = Process;
+                PromotedOnly = true;
+                Scope = Repeater;
+
+                trigger OnAction()
+                begin
+                    Rec.ViewFileContents();
+                end;
+            }
+
             action(Download)
             {
                 Caption = 'Download File';
@@ -76,6 +114,7 @@ page 50137 PTEBCFtpDownloadedFiles
                 Promoted = true;
                 PromotedCategory = Process;
                 PromotedOnly = true;
+                Scope = Repeater;
 
                 trigger OnAction()
                 begin
@@ -84,4 +123,20 @@ page 50137 PTEBCFtpDownloadedFiles
             }
         }
     }
+
+    local procedure DownloadDrillDown()
+    var
+        FtpZipFileContents: Page PTEBCFTPDownloadedZipContents;
+        NewCaptionLbl: Label 'Contents of %1', Comment = '%1 - Foldername/Zip-Filename';
+    begin
+        if not Rec.Compressed then begin
+            Rec.ViewFileContents();
+            exit;
+        end;
+
+        FtpZipFileContents.Caption(StrSubStno(NewCaptionLbl, Rec.Filename));
+        FtpZipFileContents.SetFileList(Rec.GetCompressedEntryList(), Rec);
+        FtpZipFileContents.RunModal();
+    end;
+
 }

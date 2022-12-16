@@ -19,6 +19,12 @@ table 50135 PTEBCFtpHost
             Caption = 'Ftp Folder';
             DataClassification = CustomerContent;
         }
+
+        field(3; Enabled; Boolean)
+        {
+            Caption = 'Enabled';
+            DataClassification = CustomerContent;
+        }
     }
 
     keys

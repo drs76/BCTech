@@ -1,7 +1,7 @@
 /// <summary>
-/// Page PTEBCFtpFiles (ID 50125).
+/// Page PTEBCFtpClientFilesPart (ID 50125).
 /// </summary>
-page 50125 PTEBCFtpFiles
+page 50125 PTEBCFtpClientFilesPart
 {
     Caption = 'Ftp Files';
     PageType = ListPart;
@@ -50,6 +50,7 @@ page 50125 PTEBCFtpFiles
                 ToolTip = 'Download selected file(s)';
                 ApplicationArea = All;
                 Image = Download;
+                Scope = Repeater;
 
                 trigger OnAction()
                 begin
@@ -71,16 +72,14 @@ page 50125 PTEBCFtpFiles
 
 
     var
+        BCFtpClientMgt: Codeunit PTEBCFtpClientMgt;
         JSettings: JsonObject;
         [InDataSet]
         CurrentFolder: Text;
         RootFolder: Text;
         StyleTxt: Text;
-        NameLbl: Label 'FullName';
-        SizeLbl: Label 'Size';
-        UpLevelLbl: Label '..';
         ZeroSizeLbl: Label '0';
-        ItemsLbl: Label 'Items';
+        UpLevelLbl: Label '..';
 
 
     /// <summary>
@@ -94,7 +93,9 @@ page 50125 PTEBCFtpFiles
     begin
         JSettings := NewJSettings;
         if NewJSettings.Get(RootFolderLbl, JToken) then
-            CurrentFolder := JToken.AsValue().AsText();
+            RootFolder := JToken.AsValue().AsText();
+
+        CurrentFolder := RootFolder;
     end;
 
     /// <summary>
@@ -102,15 +103,9 @@ page 50125 PTEBCFtpFiles
     /// </summary>
     /// <param name="NewSource">JsonArray.</param>
     internal procedure SetSource(NewSource: JsonArray)
-    var
-        JToken: JsonToken;
     begin
-        Rec.DeleteAll(true);
-
-        InsertNameValue(UpLevelLbl, 0);
-        foreach JToken in NewSource do
-            InsertNameValue(JToken, NewSource.IndexOf(JToken) + 1);
-
+        Rec.Reset();
+        BCFtpClientMgt.SetFtpFilesSource(NewSource, Rec);
         CurrPage.Update(false);
     end;
 
@@ -118,26 +113,8 @@ page 50125 PTEBCFtpFiles
     /// DownloadFolder.
     /// </summary>
     internal procedure DownloadFolder()
-    var
-        BCFtpMgt: Codeunit PTEBCFTPManagement;
-        Compress: Codeunit "Data Compression";
-        TempBlob: Codeunit "Temp Blob";
-        Base64: Codeunit "Base64 Convert";
-        WriteStream: OutStream;
-        ReadStream: InStream;
-        Response: Text;
-        Filename: Text;
     begin
-        if (Rec.Value <> ZeroSizeLbl) or (Rec.Name = UpLevelLbl) then
-            exit;
-
-        Response := BCFtpMgt.DownLoadFolder(JSettings, Rec.Name);
-        TempBlob.CreateOutStream(WriteStream);
-        Base64.FromBase64(Response, WriteStream);
-        TempBlob.CreateInStream(ReadStream);
-
-        Filename := Rec.Name + '.zip';
-        DownloadFromStream(ReadStream, 'Zippity Zip', '', '', Filename);
+        BCFtpClientMgt.DownloadFolder(JSettings, Rec);
     end;
 
     /// <summary>
@@ -146,7 +123,6 @@ page 50125 PTEBCFtpFiles
     internal procedure DownloadFiles()
     var
         TempNameValueBuffer: Record "Name/Value Buffer" temporary;
-        BCFtpClientMgt: Codeunit PTEBCFtpClientMgt;
     begin
         if (Rec.Value = ZeroSizeLbl) or (Rec.Name = UpLevelLbl) then
             exit;
@@ -157,76 +133,34 @@ page 50125 PTEBCFtpFiles
         BCFtpClientMgt.DownloadFiles(JSettings, TempNameValueBuffer);
     end;
 
-    local procedure InsertNameValue(JToken: JsonToken; Id: Integer)
-    var
-        JObject: JsonObject;
-        ZeroLbl: Label '0';
-    begin
-        Rec.Init();
-        Rec.ID := Id;
-
-        JObject := JToken.AsObject();
-
-        if JObject.Get(NameLbl, JToken) then
-            Rec.Name := CopyStr(JToken.AsValue().AsText(), 1, MaxStrLen(Rec.Name));
-
-        Rec.Value := ZeroLbl;
-        if JObject.Get(SizeLbl, JToken) then
-            if JToken.AsValue().AsInteger() > 0 then
-                Rec.Value := Format(JToken.AsValue().AsInteger());
-
-        Rec.Insert(false);
-    end;
-
-    local procedure InsertNameValue(Name: Text; Id: Integer)
-    begin
-        Rec.Init();
-        Rec.ID := Id;
-        Rec.Name := CopyStr(Name, 1, MaxStrLen(Rec.Name));
-        Rec.Insert(false);
-    end;
-
+    /// <summary>
+    /// NavigateUp.
+    /// Move up folder on ftp server.
+    /// </summary>
     local procedure NavigateUp()
-    var
-        BCFtp: Codeunit PTEBCFTPManagement;
-        BCFtpClientMgt: Codeunit PTEBCFtpClientMgt;
-        JToken: JsonToken;
-        FwdSlashLbl: Label '/';
-        BackSlashLbl: Label '\';
     begin
-        if CurrentFolder <> RootFolder then
-            BCFtpClientMgt.TextFromLastSlash(CurrentFolder);
-
-        if CurrentFolder.EndsWith(FwdSlashLbl) or CurrentFolder.EndsWith(BackSlashLbl) then
-            CurrentFolder := CopyStr(CurrentFolder, 1, StrLen(CurrentFolder) - 1);
-
-        JToken.ReadFrom(BCFtp.GetFilesList(JSettings, CurrentFolder));
-        if not JToken.AsObject().Get(ItemsLbl, JToken) then
-            exit;
-
-        SetSource(JToken.AsArray());
+        Rec.Reset();
+        BCFtpClientMgt.FtpFilesNavigateUp(JSettings, Rec, CurrentFolder, RootFolder);
+        CurrPage.Update(false);
     end;
 
+    /// <summary>
+    /// NavigateDown.
+    /// Move down folder on ftp server.
+    /// </summary>
     local procedure NavigateDown()
-    var
-        BCFtp: Codeunit PTEBCFTPManagement;
-        JToken: JsonToken;
     begin
-        JToken.ReadFrom(BCFtp.GetFilesList(JSettings, Rec.Name));
-        if not JToken.AsObject().Get(ItemsLbl, JToken) then
-            exit;
-
-        CurrentFolder := Rec.Name;
-        SetSource(JToken.AsArray());
+        Rec.Reset();
+        BCFtpClientMgt.FtpFilesNavigateDown(JSettings, Rec, CurrentFolder);
+        CurrPage.Update(false);
     end;
 
     local procedure SetStyle()
     var
-        StandardAccentLbl: Label 'StandardAccent';
+        StrongLbl: Label 'Strong';
     begin
-        Clear(StyleTxt);
         if Rec.Value = ZeroSizeLbl then
-            StyleTxt := StandardAccentLbl;
+            StyleTxt := StrongLbl;
     end;
 
     local procedure OnDrillDownName()

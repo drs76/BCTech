@@ -3,7 +3,7 @@
 /// </summary>
 table 50136 PTEBCFTPDownloadedFile
 {
-    Caption = 'BC FTP Downloaded Files';
+    Caption = 'FTP Downloaded Files';
     DataClassification = CustomerContent;
 
     fields
@@ -59,6 +59,7 @@ table 50136 PTEBCFTPDownloadedFile
         }
     }
 
+
     /// <summary>
     /// CreateEntry.
     /// </summary>
@@ -73,11 +74,10 @@ table 50136 PTEBCFTPDownloadedFile
         FtpHostMgt: Codeunit PTEBCFtpHostMgt;
         ReadStream: InStream;
         NewFileName: Text;
-        StoringLbl: Label 'Storing to Ftp Downloads table..';
     begin
         NewFileName := TempNameValueBuffer.Name;
-        FtpClientMgt.TextFromLastSlash(NewFileName);
-        TempBlob.CreateInStream(ReadStream);
+        FtpClientMgt.TextToFromLastSlash(NewFileName, true);
+        TempBlob.CreateInStream(ReadStream, TextEncoding::UTF8);
 
         FtpDownloadedFiles.Init();
         FtpDownloadedFiles.Filename := CopyStr(NewFileName, 1, MaxStrLen(FtpDownloadedFiles.Filename));
@@ -100,11 +100,130 @@ table 50136 PTEBCFTPDownloadedFile
         ToFileName: Text;
         EmptyTxt: Label '';
     begin
+        if not GetTenantMedia(TenantMedia) then
+            exit;
+
+        TenantMedia.Content.CreateInStream(ReadStream, TextEncoding::UTF8);
+
+        ToFileName := Rec.Filename;
+        DownloadFromStream(ReadStream, EmptyTxt, EmptyTxt, EmptyTxt, ToFileName);
+    end;
+
+    /// <summary>
+    /// GetCompressedEntryList.
+    /// Get List of entries in zip archive.
+    /// </summary>
+    /// <returns>Return variable ReturnValue of type List of [Text].</returns>
+    internal procedure GetCompressedEntryList() ReturnValue: List of [Text]
+    var
+        DataCompression: Codeunit "Data Compression";
+    begin
+        OpenZipArchive(DataCompression);
+        DataCompression.GetEntryList(ReturnValue);
+        DataCompression.CloseZipArchive();
+    end;
+
+    /// <summary>
+    /// ExtractAndDownloadCompressedEntry.
+    /// Extract and Download Compressed Entry.
+    /// </summary>
+    /// <param name="EntryFilename">Text.</param>
+    internal procedure ExtractAndDownloadCompressedEntry(EntryFilename: Text)
+    var
+        TempBlob: Codeunit "Temp Blob";
+        ReadStream: InStream;
+        WriteStream: OutStream;
+    begin
+        TempBlob.CreateOutStream(WriteStream, TextEncoding::UTF8);
+
+        ExtractZipEntry(EntryFilename, WriteStream);
+
+        TempBlob.CreateInStream(ReadStream, TextEncoding::UTF8);
+        DownloadFromStream(ReadStream, '', '', '', EntryFilename);
+    end;
+
+    /// <summary>
+    /// ExtractAndViewCompressedEntry.
+    /// </summary>
+    /// <param name="EntryFilename">Text.</param>
+    internal procedure ExtractAndViewCompressedEntry(EntryFilename: Text)
+    var
+        TempBlob: Codeunit "Temp Blob";
+        TypeHelper: Codeunit "Type Helper";
+        ReadStream: InStream;
+        WriteStream: OutStream;
+        FileContentToView: Text;
+    begin
+        TempBlob.CreateOutStream(WriteStream, TextEncoding::UTF8);
+
+        ExtractZipEntry(EntryFilename, WriteStream);
+
+        TempBlob.CreateInStream(ReadStream, TextEncoding::UTF8);
+        if not TypeHelper.TryReadAsTextWithSeparator(ReadStream, TypeHelper.LFSeparator(), FileContentToView) then
+            exit;
+
+        ViewFileContents(FileContentToView, EntryFilename);
+    end;
+
+    /// <summary>
+    /// ViewFileContents.
+    /// </summary>
+    internal procedure ViewFileContents()
+    var
+        TenantMedia: Record "Tenant Media";
+        TypeHelper: Codeunit "Type Helper";
+        ReadStream: InStream;
+        FileContentToView: Text;
+    begin
+        if not GetTenantMedia(TenantMedia) then
+            exit;
+
+        TenantMedia.Content.CreateInStream(ReadStream, TextEncoding::UTF8);
+
+        if not TypeHelper.TryReadAsTextWithSeparator(ReadStream, TypeHelper.LFSeparator(), FileContentToView) then
+            exit;
+
+        ViewFileContents(FileContentToView, Rec.Filename);
+    end;
+
+    local procedure GetTenantMedia(var TenantMedia: Record "Tenant Media") ReturnValue: Boolean
+    begin
         if not TenantMedia.Get(Rec.FileContent.MediaId) then
             exit;
 
-        ToFileName := Rec.Filename;
-        TenantMedia.Content.CreateInStream(ReadStream);
-        DownloadFromStream(ReadStream, EmptyTxt, EmptyTxt, EmptyTxt, ToFileName);
+        ReturnValue := TenantMedia.CalcFields(Content);
     end;
+
+    local procedure OpenZipArchive(var DataCompression: Codeunit "Data Compression")
+    var
+        TenantMedia: Record "Tenant Media";
+        ReadStream: InStream;
+    begin
+        if not GetTenantMedia(TenantMedia) then
+            exit;
+
+        TenantMedia.Content.CreateInStream(ReadStream, TextEncoding::UTF8);
+        DataCompression.OpenZipArchive(ReadStream, false);
+    end;
+
+    local procedure ExtractZipEntry(EntryFilename: Text; var WriteStream: OutStream)
+    var
+        DataCompression: Codeunit "Data Compression";
+        Length: Integer;
+    begin
+        OpenZipArchive(DataCompression);
+        DataCompression.ExtractEntry(EntryFilename, WriteStream, Length);
+        DataCompression.CloseZipArchive();
+    end;
+
+    local procedure ViewFileContents(PageFileContent: Text; PageFilename: Text);
+    var
+        FileContents: Page PTEBCFTPFileContent;
+        PageCaptionLbl: Label 'Contents of - %1';
+    begin
+        FileContents.Caption(StrSubstNo(PageCaptionLbl, PageFilename));
+        FileContents.SetFileContent(PageFileContent, PageFilename);
+        FileContents.RunModal();
+    end;
+
 }

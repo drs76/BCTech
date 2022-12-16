@@ -21,6 +21,12 @@ page 50134 PTEBCFTPHosts
                     ApplicationArea = All;
                     ToolTip = 'Specifies the value of the Name field.';
                 }
+
+                field(Enabled; Rec.Enabled)
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Specifies the value of the Enabled fields.';
+                }
             }
         }
     }

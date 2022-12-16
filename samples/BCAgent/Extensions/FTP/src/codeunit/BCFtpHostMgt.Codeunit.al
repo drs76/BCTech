@@ -90,11 +90,16 @@ codeunit 50133 PTEBCFtpHostMgt
     internal procedure GetHostName(JSettings: JsonObject): Text
     var
         JToken: JsonToken;
+        HostCodeLbl: Label 'hostCode';
     begin
-        if not JSettings.Contains(HostnameLbl) then
-            exit;
+        if JSettings.Contains(HostCodeLbl) then
+            JSettings.Get(HostCodeLbl, JToken)
+        else
+            if JSettings.Contains(HostnameLbl) then
+                JSettings.Get(HostnameLbl, JToken)
+            else
+                exit;
 
-        JSettings.Get(HostnameLbl, JToken);
         exit(JToken.AsValue().AsText());
     end;
 

@@ -11,7 +11,7 @@ page 50124 PTEBCFTPClient
     InsertAllowed = false;
     ModifyAllowed = true;
     DeleteAllowed = false;
-    PromotedActionCategories = 'New,,,Hosts,Ftp';
+    PromotedActionCategories = 'New,Ftp';
 
     layout
     {
@@ -26,7 +26,7 @@ page 50124 PTEBCFTPClient
                     Caption = 'FTP Host';
                     ToolTip = 'Specifies the FTP Host to use.';
                     ApplicationArea = All;
-                    TableRelation = PTEBCFtpHost;
+                    TableRelation = PTEBCFtpHost where(Enabled = const(true));
 
                     trigger OnValidate()
                     begin
@@ -42,24 +42,10 @@ page 50124 PTEBCFTPClient
                 }
             }
 
-            group(Response)
-            {
-                Caption = 'Response';
-
-                field(FtpResponse; FtpResponse)
-                {
-                    ApplicationArea = All;
-                    Caption = 'FTP Response';
-                    ToolTip = 'Specifies the response from last Ftp command.';
-                    MultiLine = true;
-                }
-            }
-
-            part(BCFtpFiles; PTEBCFtpFiles)
+            part(BCFtpFiles; PTEBCFtpClientFilesPart)
             {
                 Editable = false;
                 ApplicationArea = All;
-                Caption = 'Ftp File List';
             }
         }
     }
@@ -68,6 +54,23 @@ page 50124 PTEBCFTPClient
     {
         area(Processing)
         {
+            group(Hosts)
+            {
+                Caption = 'Hosts';
+                action(HostList)
+                {
+                    Caption = 'Hosts';
+                    ToolTip = 'Maintain Ftp Hosts.';
+                    ApplicationArea = All;
+                    Image = Web;
+                    Promoted = true;
+                    PromotedCategory = Process;
+                    PromotedOnly = true;
+
+                    RunObject = Page PTEBCFTPHosts;
+                }
+            }
+
             group(Ftp)
             {
                 Caption = 'Ftp';
@@ -79,26 +82,7 @@ page 50124 PTEBCFTPClient
                     Image = Continue;
                     Promoted = true;
                     PromotedOnly = true;
-                    PromotedCategory = Category5;
-
-                    trigger OnAction()
-                    var
-                        BCFtpMgt: Codeunit PTEBCFTPManagement;
-                    begin
-                        FtpResponse := BCFtpMgt.Connect(JSettings);
-                        CurrPage.Update(false);
-                    end;
-                }
-
-                action(GetFileList)
-                {
-                    ApplicationArea = All;
-                    Caption = 'File List';
-                    ToolTip = 'Get list of files on FTP server';
-                    Image = Continue;
-                    Promoted = true;
-                    PromotedOnly = true;
-                    PromotedCategory = Category5;
+                    PromotedCategory = Process;
 
                     trigger OnAction()
                     begin
@@ -106,52 +90,40 @@ page 50124 PTEBCFTPClient
                     end;
                 }
 
-                action(DownloadFile)
+                group(Download)
                 {
-                    Caption = 'Download File';
-                    ToolTip = 'Download selected file(s)';
-                    ApplicationArea = All;
-                    Image = Download;
-                    Promoted = true;
-                    PromotedOnly = true;
-                    PromotedCategory = Category5;
+                    Caption = 'Download';
+                    action(DownloadFile)
+                    {
+                        Caption = 'Download File';
+                        ToolTip = 'Download selected file(s)';
+                        ApplicationArea = All;
+                        Image = Download;
+                        Promoted = true;
+                        PromotedOnly = true;
+                        PromotedCategory = Process;
 
-                    trigger OnAction()
-                    begin
-                        CurrPage.BCFtpFiles.Page.DownloadFiles();
-                    end;
-                }
+                        trigger OnAction()
+                        begin
+                            CurrPage.BCFtpFiles.Page.DownloadFiles();
+                        end;
+                    }
 
-                action(DownloadDirectory)
-                {
-                    Caption = 'Download Folder';
-                    ToolTip = 'Download selected folder and its contents.';
-                    ApplicationArea = All;
-                    Image = Download;
-                    Promoted = true;
-                    PromotedCategory = Category5;
-                    PromotedOnly = true;
+                    action(DownloadDirectory)
+                    {
+                        Caption = 'Download Folder';
+                        ToolTip = 'Download selected folder and its contents.';
+                        ApplicationArea = All;
+                        Image = Download;
+                        Promoted = true;
+                        PromotedCategory = Process;
+                        PromotedOnly = true;
 
-                    trigger OnAction()
-                    begin
-                        CurrPage.BCFtpFiles.Page.DownloadFolder();
-                    end;
-                }
-            }
-            group(Hosts)
-            {
-                Caption = 'Hosts';
-                action(HostList)
-                {
-                    Caption = 'Hosts';
-                    ToolTip = 'Maintain Ftp Hosts.';
-                    ApplicationArea = All;
-                    Image = Web;
-                    Promoted = true;
-                    PromotedCategory = Category4;
-                    PromotedOnly = true;
-
-                    RunObject = Page PTEBCFTPHosts;
+                        trigger OnAction()
+                        begin
+                            CurrPage.BCFtpFiles.Page.DownloadFolder();
+                        end;
+                    }
                 }
             }
 
@@ -174,13 +146,19 @@ page 50124 PTEBCFTPClient
         BCFtpClientMgt: Codeunit PTEBCFtpClientMgt;
         JSettings: JsonObject;
         FtpHost: Text;
-        FtpResponse: Text;
         FtpFolder: Text;
 
 
     local procedure UpdateSettings()
+    var
+        HostCodeLbl: Label 'hostCode';
     begin
         BCFtpClientMgt.UpdateClientPageSettings(JSettings, FtpFolder);
+        if JSettings.Contains(HostCodeLbl) then
+            JSettings.Replace(HostCodeLbl, FtpHost)
+        else
+            JSettings.Add(HostCodeLbl, FtpHost);
+
         CurrPage.BCFtpFiles.Page.SetSettings(JSettings);
     end;
 
