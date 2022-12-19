@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFrameworks>net48</TargetFrameworks>
+
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Ghostscript.NET" Version="1.2.3" />
+		<PackageReference Include="Json.Net" Version="1.0.33" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+		<PackageReference Include="System.Drawing.Common" Version="7.0.0" />
+		<PackageReference Include="System.Runtime.InteropServices.RuntimeInformation" Version="4.3.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\BCAgentCommon\BCAgentCommon.csproj" />
+	</ItemGroup>
+
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<ItemGroup>
+			<FilesToDeploy Include="$(TargetDir)\*.dll" />
+			<FilesToDeploy Include="$(TargetDir)\*.pdb" />
+			<FilesToDeploy Include="$(TargetDir)\*.config" />
+		</ItemGroup>
+		<Message Text="Deploying plugin ..." />
+		<Copy SourceFiles="@(FilesToDeploy)" DestinationFolder="$(MSBuildProjectDirectory)\..\..\BCAgent\bin\debug\net6.0\Plugins" SkipUnchangedFiles="true" />
+	</Target>
+</Project>
