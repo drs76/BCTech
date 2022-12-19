@@ -8,9 +8,7 @@ page 50137 PTEBCFtpDownloadedFiles
     PageType = List;
     SourceTable = PTEBCFTPDownloadedFile;
     UsageCategory = Administration;
-    InsertAllowed = false;
-    ModifyAllowed = false;
-    DeleteAllowed = true;
+    Editable = false;
 
     layout
     {
@@ -108,7 +106,7 @@ page 50137 PTEBCFtpDownloadedFiles
             action(Download)
             {
                 Caption = 'Download File';
-                ToolTip = 'Download selected fileo(s).';
+                ToolTip = 'Download selected file(s).';
                 ApplicationArea = All;
                 Image = Download;
                 Promoted = true;
@@ -119,6 +117,23 @@ page 50137 PTEBCFtpDownloadedFiles
                 trigger OnAction()
                 begin
                     Rec.DownloadFile();
+                end;
+            }
+
+            action(Delete)
+            {
+                Caption = 'Delete Download';
+                ToolTip = 'Deleted the selected download file(s).';
+                ApplicationArea = All;
+                Image = Download;
+                Promoted = true;
+                PromotedCategory = Process;
+                PromotedOnly = true;
+                Scope = Repeater;
+
+                trigger OnAction()
+                begin
+                    DeleteRecs();
                 end;
             }
         }
@@ -137,6 +152,15 @@ page 50137 PTEBCFtpDownloadedFiles
         FtpZipFileContents.Caption(StrSubStno(NewCaptionLbl, Rec.Filename));
         FtpZipFileContents.SetFileList(Rec.GetCompressedEntryList(), Rec);
         FtpZipFileContents.RunModal();
+    end;
+
+    local procedure DeleteRecs()
+    var
+        DownloadFiles: Record PTEBCFTPDownloadedFile;
+    begin
+        CurrPage.SetSelectionFilter(DownloadFiles);
+        if not DownloadFiles.IsEmpty() then
+            DownloadFiles.DeleteAll(true);
     end;
 
 }

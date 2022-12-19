@@ -3,7 +3,7 @@
 /// </summary>
 page 50138 PTEBCFTPDownloadedZipContents
 {
-    Caption = 'Zip File Contents';
+    Caption = 'Ftp Zip File Contents';
     PromotedActionCategories = 'New,Zip Entry,''';
     PageType = List;
     SourceTable = "Name/Value Buffer";
@@ -23,7 +23,7 @@ page 50138 PTEBCFTPDownloadedZipContents
                 {
                     Caption = 'Filename';
                     ApplicationArea = All;
-                    ToolTip = 'Specifies the file name';
+                    ToolTip = 'Specifies the file name.';
                     Style = Strong;
                 }
             }

@@ -1,7 +1,7 @@
 /// <summary>
-/// Page PTEBCFtpClientFilesPart (ID 50125).
+/// Page PTEBCFtpClientFilesPart (ID 50133).
 /// </summary>
-page 50125 PTEBCFtpClientFilesPart
+page 50133 PTEBCFtpClientFilesPart
 {
     Caption = 'Ftp Files';
     PageType = ListPart;
@@ -17,7 +17,7 @@ page 50125 PTEBCFtpClientFilesPart
                 field(FolderName; Rec.Name)
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies the file/folder name';
+                    ToolTip = 'Specifies the file/folder name.';
                     Caption = 'Name';
                     Editable = false;
                     DrillDown = true;
@@ -32,7 +32,7 @@ page 50125 PTEBCFtpClientFilesPart
                 field(Size; Rec.Value)
                 {
                     ApplicationArea = All;
-                    ToolTip = 'Specifies the file size';
+                    ToolTip = 'Specifies the file size.';
                     Caption = 'Size';
                     Editable = false;
                 }
@@ -47,7 +47,7 @@ page 50125 PTEBCFtpClientFilesPart
             action(DownloadFile)
             {
                 Caption = 'Download';
-                ToolTip = 'Download selected file(s)';
+                ToolTip = 'Download selected file(s).';
                 ApplicationArea = All;
                 Image = Download;
                 Scope = Repeater;
@@ -89,7 +89,7 @@ page 50125 PTEBCFtpClientFilesPart
     procedure SetSettings(NewJSettings: JsonObject)
     var
         JToken: JsonToken;
-        RootFolderLbl: Label 'RootFolder';
+        RootFolderLbl: Label 'rootFolder';
     begin
         JSettings := NewJSettings;
         if NewJSettings.Get(RootFolderLbl, JToken) then
@@ -106,6 +106,7 @@ page 50125 PTEBCFtpClientFilesPart
     begin
         Rec.Reset();
         BCFtpClientMgt.SetFtpFilesSource(NewSource, Rec);
+        BCFtpClientMgt.CheckForRootFolder(JSettings, Rec, CurrentFolder, RootFolder);
         CurrPage.Update(false);
     end;
 

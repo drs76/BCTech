@@ -1,7 +1,7 @@
 /// <summary>
-/// Page PTEBCFTPClient (ID 50124).
+/// Page PTEBCFTPClient (ID 50136).
 /// </summary>
-page 50124 PTEBCFTPClient
+page 50136 PTEBCFTPClient
 {
     Caption = 'FTP Client';
     AdditionalSearchTerms = 'BC FTP';
@@ -24,7 +24,7 @@ page 50124 PTEBCFTPClient
                 field(FtpHost; FtpHost)
                 {
                     Caption = 'FTP Host';
-                    ToolTip = 'Specifies the FTP Host to use.';
+                    ToolTip = 'Specifies the FTP Host to connect with.';
                     ApplicationArea = All;
                     TableRelation = PTEBCFtpHost where(Enabled = const(true));
 
@@ -37,7 +37,7 @@ page 50124 PTEBCFTPClient
                 field(FtpFolder; FtpFolder)
                 {
                     Caption = 'FTP Folder';
-                    ToolTip = 'Specifies the FTP Host Folder to use.';
+                    ToolTip = 'Specifies the FTP Host Folder as the root folder.';
                     ApplicationArea = All;
                 }
             }
@@ -60,7 +60,7 @@ page 50124 PTEBCFTPClient
                 action(HostList)
                 {
                     Caption = 'Hosts';
-                    ToolTip = 'Maintain Ftp Hosts.';
+                    ToolTip = 'Maintain Ftp Host entries.';
                     ApplicationArea = All;
                     Image = Web;
                     Promoted = true;
@@ -78,7 +78,7 @@ page 50124 PTEBCFTPClient
                 {
                     ApplicationArea = All;
                     Caption = 'Connect';
-                    ToolTip = 'Connect to the selected FTP Host.';
+                    ToolTip = 'Connect to the selected FTP Host and list root folder.';
                     Image = Continue;
                     Promoted = true;
                     PromotedOnly = true;
@@ -86,6 +86,9 @@ page 50124 PTEBCFTPClient
 
                     trigger OnAction()
                     begin
+                        if StrLen(FtpHost) = 0 then
+                            exit;
+
                         GetFilesList();
                     end;
                 }
@@ -96,7 +99,7 @@ page 50124 PTEBCFTPClient
                     action(DownloadFile)
                     {
                         Caption = 'Download File';
-                        ToolTip = 'Download selected file(s)';
+                        ToolTip = 'Download selected file(s).';
                         ApplicationArea = All;
                         Image = Download;
                         Promoted = true;
@@ -105,6 +108,9 @@ page 50124 PTEBCFTPClient
 
                         trigger OnAction()
                         begin
+                            if StrLen(FtpHost) = 0 then
+                                exit;
+
                             CurrPage.BCFtpFiles.Page.DownloadFiles();
                         end;
                     }
@@ -112,7 +118,7 @@ page 50124 PTEBCFTPClient
                     action(DownloadDirectory)
                     {
                         Caption = 'Download Folder';
-                        ToolTip = 'Download selected folder and its contents.';
+                        ToolTip = 'Download selected folder and its contents. The folder contents will be compressed into a single file.';
                         ApplicationArea = All;
                         Image = Download;
                         Promoted = true;
@@ -121,6 +127,9 @@ page 50124 PTEBCFTPClient
 
                         trigger OnAction()
                         begin
+                            if StrLen(FtpHost) = 0 then
+                                exit;
+
                             CurrPage.BCFtpFiles.Page.DownloadFolder();
                         end;
                     }
@@ -130,14 +139,21 @@ page 50124 PTEBCFTPClient
             action(Files)
             {
                 Caption = 'Downloaded Files';
-                ToolTip = 'View files downloaded by the ftp client.';
+                ToolTip = 'View files downloaded by the ftp client. View pre-filtered to current Ftp Host.';
                 ApplicationArea = All;
                 Image = Documents;
                 Promoted = true;
                 PromotedCategory = Process;
                 PromotedOnly = true;
 
-                RunObject = Page PTEBCFtpDownloadedFiles;
+                trigger OnAction()
+                var
+                    DownloadedFiles: Record PTEBCFTPDownloadedFile;
+                begin
+                    DownloadedFiles.Reset();
+                    DownloadedFiles.SetRange(FtpHost, FtpHost);
+                    Page.RunModal(Page::PTEBCFtpDownloadedFiles, DownloadedFiles);
+                end;
             }
         }
     }

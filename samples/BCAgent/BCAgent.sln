@@ -19,7 +19,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FileSystemPlugin", "Plugins
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BCAgentService", "BCAgentService\BCAgentService.csproj", "{947BFC68-FE11-4ED6-86A4-482B7FDD8A1A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FTPPlugin", "Plugins\FTPPlugin\FTPPlugin.csproj", "{F1BD47A5-67E4-4D6D-B576-7A1E659CEC32}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FTPPlugin", "Plugins\FTPPlugin\FTPPlugin.csproj", "{F1BD47A5-67E4-4D6D-B576-7A1E659CEC32}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LocalPrintersPlugin", "Plugins\LocalPrinters\LocalPrintersPlugin.csproj", "{9DE24A70-FBEA-4507-9899-91FBDB56C04E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -59,6 +61,10 @@ Global
 		{F1BD47A5-67E4-4D6D-B576-7A1E659CEC32}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F1BD47A5-67E4-4D6D-B576-7A1E659CEC32}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F1BD47A5-67E4-4D6D-B576-7A1E659CEC32}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9DE24A70-FBEA-4507-9899-91FBDB56C04E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9DE24A70-FBEA-4507-9899-91FBDB56C04E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9DE24A70-FBEA-4507-9899-91FBDB56C04E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9DE24A70-FBEA-4507-9899-91FBDB56C04E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -68,6 +74,7 @@ Global
 		{5024FE34-27A9-4597-A5A8-F53FECAFE6AB} = {2F5D5C85-935B-4A0C-ADCD-56D736C0A807}
 		{0DC3CFCD-8419-4392-AFE4-8245103BD67F} = {2F5D5C85-935B-4A0C-ADCD-56D736C0A807}
 		{F1BD47A5-67E4-4D6D-B576-7A1E659CEC32} = {2F5D5C85-935B-4A0C-ADCD-56D736C0A807}
+		{9DE24A70-FBEA-4507-9899-91FBDB56C04E} = {2F5D5C85-935B-4A0C-ADCD-56D736C0A807}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CF18E50B-B96E-41B3-B63D-578DC36A27D6}

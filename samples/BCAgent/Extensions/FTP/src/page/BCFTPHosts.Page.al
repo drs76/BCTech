@@ -16,6 +16,8 @@ page 50134 PTEBCFTPHosts
         {
             repeater(General)
             {
+                Editable = false;
+
                 field(Name; Rec.Name)
                 {
                     ApplicationArea = All;

@@ -58,7 +58,7 @@ codeunit 50136 PTEBCFtpClientMgt
     /// </summary>
     internal procedure DownloadFolder(JSettings: JsonObject; TempNameValueBuffer: Record "Name/Value Buffer" temporary)
     var
-        BCFtpMgt: Codeunit PTEBCFTPManagement;
+        BCFtpMgt: Codeunit PTEBCFTPMgt;
         TempBlob: Codeunit "Temp Blob";
         Base64: Codeunit "Base64 Convert";
         WriteStream: OutStream;
@@ -111,7 +111,7 @@ codeunit 50136 PTEBCFtpClientMgt
     /// <returns>Return variable ReturnValue of type JsonArray.</returns>
     internal procedure GetFtpFolderFilesList(JSettings: JsonObject; FtpFolder: Text) ReturnValue: JsonArray
     var
-        BCFtpMgt: Codeunit PTEBCFTPManagement;
+        BCFtpMgt: Codeunit PTEBCFTPMgt;
         JToken: JsonToken;
     begin
         JToken.ReadFrom(BCFtpMgt.GetFilesList(JSettings, FtpFolder));
@@ -175,7 +175,7 @@ codeunit 50136 PTEBCFtpClientMgt
     /// <param name="RootFolder">Text.</param>
     internal procedure FtpFilesNavigateUp(JSettings: JsonObject; var NewTempNameValue: Record "Name/Value Buffer" temporary; var CurrentFolder: Text; RootFolder: Text)
     var
-        BCFtp: Codeunit PTEBCFTPManagement;
+        BCFtp: Codeunit PTEBCFTPMgt;
         BCFtpClientMgt: Codeunit PTEBCFtpClientMgt;
         JToken: JsonToken;
         FwdSlashLbl: Label '/';
@@ -192,6 +192,7 @@ codeunit 50136 PTEBCFtpClientMgt
             exit;
 
         SetFtpFilesSource(JToken.AsArray(), NewTempNameValue);
+        CheckForRootFolder(JSettings, NewTempNameValue, CurrentFolder, RootFolder);
     end;
 
     /// <summary>
@@ -202,8 +203,9 @@ codeunit 50136 PTEBCFtpClientMgt
     /// <param name="CurrentFolder">VAR Text.</param>
     internal procedure FtpFilesNavigateDown(JSettings: JsonObject; var NewTempNameValue: Record "Name/Value Buffer" temporary; var CurrentFolder: Text)
     var
-        BCFtp: Codeunit PTEBCFTPManagement;
+        BCFtp: Codeunit PTEBCFTPMgt;
         JToken: JsonToken;
+        EmptyTxt: Label '';
     begin
         JToken.ReadFrom(BCFtp.GetFilesList(JSettings, NewTempNameValue.Name));
         if not JToken.AsObject().Get(ItemsLbl, JToken) then
@@ -211,11 +213,35 @@ codeunit 50136 PTEBCFtpClientMgt
 
         CurrentFolder := NewTempNameValue.Name;
         SetFtpFilesSource(JToken.AsArray(), NewTempNameValue);
+        CheckForRootFolder(JSettings, NewTempNameValue, CurrentFolder, EmptyTxt);
+    end;
+
+    /// <summary>
+    /// CheckForRootFolder.
+    /// </summary>
+    /// <param name="JSettings">VAR JsonObject.</param>
+    /// <param name="NewTempNameValue">Temporary VAR Record "Name/Value Buffer".</param>
+    /// <param name="CurrentFolder">Text.</param>
+    /// <param name="RootFolder">Text.</param>
+    internal procedure CheckForRootFolder(var JSettings: JsonObject; var NewTempNameValue: Record "Name/Value Buffer" temporary; CurrentFolder: Text; RootFolder: Text)
+    var
+        JToken: JsonToken;
+    begin
+        if StrLen(RootFolder) = 0 then
+            if JSettings.Contains('rootFolder') then
+                if JSettings.Get('rootFolder', JToken) then
+                    RootFolder := JToken.AsValue().AsText();
+
+        if CurrentFolder <> RootFolder then
+            exit;
+
+        if NewTempNameValue.FindFirst() then
+            NewTempNameValue.Delete(true);
     end;
 
     /// <summary>
     /// InsertNameValueForFtpFilesPage.
-    /// </summary>
+    /// /// /// </summary>
     /// <param name="JToken">JsonToken.</param>
     /// <param name="Id">Integer.</param>
     local procedure InsertNameValueForFtpFilesPage(var NewTempNameValue: Record "Name/Value Buffer" temporary; JToken: JsonToken; Id: Integer)
@@ -267,7 +293,7 @@ codeunit 50136 PTEBCFtpClientMgt
     /// <returns>Return variable ReturnValue of type Boolean.</returns>
     local procedure DownloadFtpFile(var JSettings: JsonObject; var TempNameValueBuffer: Record "Name/Value Buffer" temporary; var TempBlob: Codeunit "Temp Blob") ReturnValue: Boolean
     var
-        BCFtpMgt: Codeunit PTEBCFTPManagement;
+        BCFtpMgt: Codeunit PTEBCFTPMgt;
         Base64Convert: Codeunit "Base64 Convert";
         WriteStream: OutStream;
         FileContent: Text;
@@ -327,4 +353,5 @@ codeunit 50136 PTEBCFtpClientMgt
 
         Clear(ProgressOpened);
     end;
+
 }

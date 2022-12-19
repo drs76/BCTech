@@ -1,13 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net472;net6.0</TargetFrameworks>
+    <TargetFrameworks>net48;net60</TargetFrameworks>
     <AssemblyName>Microsoft.Dynamics.BusinessCentral.Agent.RequestDispatcher</AssemblyName>
     <RootNamespace>Microsoft.Dynamics.BusinessCentral.Agent.RequestDispatcher</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentFTP" Version="42.1.0" />
     <PackageReference Include="Microsoft.Azure.Relay" Version="2.0.15596" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="System.Collections.Immutable" Version="7.0.0" />

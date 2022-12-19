@@ -1,28 +1,34 @@
 /// <summary>
-/// Codeunit PTEBCFtpHostMgt (ID 50133).
+/// Codeunit PTEBCFtpHostMgt (ID 50135).
 /// </summary>
-codeunit 50133 PTEBCFtpHostMgt
+codeunit 50135 PTEBCFtpHostMgt
 {
     var
         HostnameLbl: Label 'hostName';
         UsernameLbl: Label 'userName';
         PasswdLbl: Label 'passwd';
+        SSLCertLbl: Label 'sslCert';
 
 
     /// <summary>
     /// GetHostDetails.
     /// </summary>
     /// <param name="FtpName">Text.</param>
-    /// <param name="Host">VAR Text.</param>
-    /// <param name="Usr">VAR Text.</param>
-    /// <param name="Pwd">VAR Text.</param>
-    internal procedure UpdateHostDetails(FtpName: Text; Host: Text; Usr: Text; Pwd: Text)
+    /// <param name="Host">Text.</param>
+    /// <param name="Usr">Text.</param>
+    /// <param name="Pwd">Text.</param>
+    /// <param name="SslCert">Text.</param>
+    internal procedure UpdateHostDetails(FtpName: Text; Host: Text; Usr: Text; Pwd: Text; SslCert: Text)
     var
         JObject: JsonObject;
     begin
+        if StrLen(FtpName) = 0 then
+            exit;
+
         UpdateObject(JObject, HostnameLbl, Host);
         UpdateObject(JObject, UsernameLbl, Usr);
         UpdateObject(JObject, PasswdLbl, Pwd);
+        UpdateObject(JObject, SSLCertLbl, SslCert);
 
         SaveInIsolatedStorage(FtpName, JObject);
     end;
@@ -34,7 +40,8 @@ codeunit 50133 PTEBCFtpHostMgt
     /// <param name="Host">VAR Text.</param>
     /// <param name="Usr">VAR Text.</param>
     /// <param name="Pwd">VAR Text.</param>
-    internal procedure GetHostDetails(FtpName: Text; var Host: Text; var Usr: Text; var Pwd: Text)
+    /// <param name="SslCert">VAR Text.</param>
+    internal procedure GetHostDetails(FtpName: Text; var Host: Text; var Usr: Text; var Pwd: Text; var SslCert: Text)
     var
         JObject: JsonObject;
         JToken: JsonToken;
@@ -54,6 +61,9 @@ codeunit 50133 PTEBCFtpHostMgt
 
         if JObject.Get(PasswdLbl, JToken) then
             Pwd := JToken.AsValue().AsText();
+
+        if JObject.Get(SSLCertLbl, JToken) then
+            SslCert := JToken.AsValue().AsText();
     end;
 
     /// <summary>
@@ -87,7 +97,7 @@ codeunit 50133 PTEBCFtpHostMgt
     /// </summary>
     /// <param name="JSettings">JsonObject.</param>
     /// <returns>Return value of type Text.</returns>
-    internal procedure GetHostName(JSettings: JsonObject): Text
+    internal procedure GetHostCode(JSettings: JsonObject): Text
     var
         JToken: JsonToken;
         HostCodeLbl: Label 'hostCode';
@@ -115,7 +125,17 @@ codeunit 50133 PTEBCFtpHostMgt
             JObjectToStore := Value;
             UpdateObject(JObject, name, JObjectToStore);
         end;
+    end;
 
+    internal procedure UpdateSslCert(FtpName: Text; Host: Text; Usr: Text; Pwd: Text)
+    var
+        JObject: JsonObject;
+    begin
+        UpdateObject(JObject, HostnameLbl, Host);
+        UpdateObject(JObject, UsernameLbl, Usr);
+        UpdateObject(JObject, PasswdLbl, Pwd);
+
+        SaveInIsolatedStorage(FtpName, JObject);
     end;
 
     local procedure UpdateObject(var JObject: JsonObject; Name: Text; Value: Text)

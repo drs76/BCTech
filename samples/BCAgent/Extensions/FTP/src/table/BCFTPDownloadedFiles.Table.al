@@ -55,9 +55,11 @@ table 50136 PTEBCFTPDownloadedFile
 
         key(Host; FtpHost)
         {
-
         }
     }
+
+    var
+        EmptyTxt: Label '';
 
 
     /// <summary>
@@ -84,7 +86,7 @@ table 50136 PTEBCFTPDownloadedFile
         Evaluate(FtpDownloadedFiles.Size, TempNameValueBuffer.Value);
         FtpDownloadedFiles.FileContent.ImportStream(ReadStream, NewFileName);
         FtpDownloadedFiles.Compressed := IsCompressed;
-        FtpDownloadedFiles.FtpHost := CopyStr(FtpHostMgt.GetHostName(JSettings), 1, MaxStrLen(FtpDownloadedFiles.FtpHost));
+        FtpDownloadedFiles.FtpHost := CopyStr(FtpHostMgt.GetHostCode(JSettings), 1, MaxStrLen(FtpDownloadedFiles.FtpHost));
         FtpDownloadedFiles.Insert(true);
 
         Rec := FtpDownloadedFiles;
@@ -98,7 +100,6 @@ table 50136 PTEBCFTPDownloadedFile
         TenantMedia: Record "Tenant Media";
         ReadStream: InStream;
         ToFileName: Text;
-        EmptyTxt: Label '';
     begin
         if not GetTenantMedia(TenantMedia) then
             exit;
@@ -132,14 +133,11 @@ table 50136 PTEBCFTPDownloadedFile
     var
         TempBlob: Codeunit "Temp Blob";
         ReadStream: InStream;
-        WriteStream: OutStream;
     begin
-        TempBlob.CreateOutStream(WriteStream, TextEncoding::UTF8);
-
-        ExtractZipEntry(EntryFilename, WriteStream);
+        ExtractZipEntry(EntryFilename, TempBlob);
 
         TempBlob.CreateInStream(ReadStream, TextEncoding::UTF8);
-        DownloadFromStream(ReadStream, '', '', '', EntryFilename);
+        DownloadFromStream(ReadStream, EmptyTxt, EmptyTxt, EmptyTxt, EntryFilename);
     end;
 
     /// <summary>
@@ -149,17 +147,13 @@ table 50136 PTEBCFTPDownloadedFile
     internal procedure ExtractAndViewCompressedEntry(EntryFilename: Text)
     var
         TempBlob: Codeunit "Temp Blob";
-        TypeHelper: Codeunit "Type Helper";
         ReadStream: InStream;
-        WriteStream: OutStream;
         FileContentToView: Text;
     begin
-        TempBlob.CreateOutStream(WriteStream, TextEncoding::UTF8);
+        ExtractZipEntry(EntryFilename, TempBlob);
 
-        ExtractZipEntry(EntryFilename, WriteStream);
-
-        TempBlob.CreateInStream(ReadStream, TextEncoding::UTF8);
-        if not TypeHelper.TryReadAsTextWithSeparator(ReadStream, TypeHelper.LFSeparator(), FileContentToView) then
+        TempBlob.CreateInStream(ReadStream);
+        if ReadStream.Read(FileContentToView) = 0 then
             exit;
 
         ViewFileContents(FileContentToView, EntryFilename);
@@ -171,7 +165,6 @@ table 50136 PTEBCFTPDownloadedFile
     internal procedure ViewFileContents()
     var
         TenantMedia: Record "Tenant Media";
-        TypeHelper: Codeunit "Type Helper";
         ReadStream: InStream;
         FileContentToView: Text;
     begin
@@ -179,8 +172,7 @@ table 50136 PTEBCFTPDownloadedFile
             exit;
 
         TenantMedia.Content.CreateInStream(ReadStream, TextEncoding::UTF8);
-
-        if not TypeHelper.TryReadAsTextWithSeparator(ReadStream, TypeHelper.LFSeparator(), FileContentToView) then
+        if ReadStream.Read(FileContentToView) = 0 then
             exit;
 
         ViewFileContents(FileContentToView, Rec.Filename);
@@ -206,12 +198,15 @@ table 50136 PTEBCFTPDownloadedFile
         DataCompression.OpenZipArchive(ReadStream, false);
     end;
 
-    local procedure ExtractZipEntry(EntryFilename: Text; var WriteStream: OutStream)
+    local procedure ExtractZipEntry(EntryFilename: Text; var TempBlob: Codeunit "Temp Blob")
     var
         DataCompression: Codeunit "Data Compression";
+        WriteStream: OutStream;
         Length: Integer;
     begin
         OpenZipArchive(DataCompression);
+
+        TempBlob.CreateOutStream(WriteStream, TextEncoding::UTF8);
         DataCompression.ExtractEntry(EntryFilename, WriteStream, Length);
         DataCompression.CloseZipArchive();
     end;
@@ -219,7 +214,7 @@ table 50136 PTEBCFTPDownloadedFile
     local procedure ViewFileContents(PageFileContent: Text; PageFilename: Text);
     var
         FileContents: Page PTEBCFTPFileContent;
-        PageCaptionLbl: Label 'Contents of - %1';
+        PageCaptionLbl: Label 'Contents of - %1', Comment = '%1 - Filename|Foldername';
     begin
         FileContents.Caption(StrSubstNo(PageCaptionLbl, PageFilename));
         FileContents.SetFileContent(PageFileContent, PageFilename);

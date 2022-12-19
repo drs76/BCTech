@@ -1,26 +1,23 @@
 ﻿namespace FTPPlugin {
 
     using FluentFTP;
-    using FluentFTP.Helpers;
-    using FluentFTP.Rules;
+    using FluentFTP.Client.BaseClient;
     using Microsoft.Dynamics.BusinessCentral.Agent.Common;
-    using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.IO.Compression;
-    using System.IO.Pipes;
     using System.Linq;
+    using System.Net.Security;
+    using System.Security.Authentication;
+    using System.Security.Cryptography.X509Certificates;
+    using System.Dynamic;
 
     [AgentPlugin("ftp/V1.0")]
     public class FTPPlugin : IAgentPlugin {
-        protected string HostName { get; set; }
-        protected string UserName { get; set; }
-        protected string Passwd { get; set; }
-        protected string RootFolder { get; set; }
-
+        protected internal dynamic ftpSetup = new FtpClientSetup();
 
         [PluginMethod("GET")]
         public string ConnectFtp(string jsonsettings) {
@@ -41,45 +38,22 @@
         }
 
         [PluginMethod("GET")]
-        public string SetWorkingDirectoryFtp(string jsonsettings, string foldername) {
-            SetSettings(jsonsettings);
-            SetWorkingDirectory(foldername);
-            return (SetReturnValue(string.Empty, string.Empty));
-        }
-
-        [PluginMethod("GET")]
         public string DownloadFileFtp(string jsonsettings, string filename) {
             SetSettings(jsonsettings);
             return DownloadFileBytes(filename);
         }
 
-        [PluginMethod("GET")]
-        public void SetWorkingDirectory(string foldername) {
-            using (var conn = new FtpClient(this.HostName, this.UserName, this.Passwd)) {
-                conn.Connect();
-                conn.SetWorkingDirectory(foldername);
-            }
-        }
-
-        [PluginMethod("GET")]
-        public string GetWorkingDirectory(string foldername) {
-            using (var conn = new FtpClient(this.HostName, this.UserName, this.Passwd)) {
-                conn.Connect();
-                return SetReturnValue(conn.GetWorkingDirectory(), string.Empty);
-            }
-        }
-
-        internal string Connect() {
+        protected string Connect() {
             const string ConnectedLbl = "Connected.";
-            using (var conn = new FtpClient(this.HostName, this.UserName, this.Passwd)) {
+            using (FtpClient conn = new FtpClient(ftpSetup.hostName.ToString(), ftpSetup.userName.ToString(), ftpSetup.passwd.ToString())) {
                 conn.Connect();
-                return SetReturnValue(ConnectedLbl, string.Empty);
+                return ConnectedLbl;
             }
         }
 
-        internal string DownloadDirectory(string foldername) {
+        protected string DownloadDirectory(string foldername) {
             byte[] zipFile;
-            using (var ftp = new FtpClient(this.HostName, this.UserName, this.Passwd)) {
+            using (FtpClient ftp = new FtpClient(ftpSetup.hostName.ToString(), ftpSetup.userName.ToString(), ftpSetup.passwd.ToString())) {
                 ftp.Connect();
                 ftp.SetWorkingDirectory(foldername);
 
@@ -104,10 +78,51 @@
             return Convert.ToBase64String(zipFile.ToArray());
         }
 
-        internal string DownloadFileBytes(string filename) {
+        protected void ApplyConnectionSecurity(ref FtpClient ftp) {
+            const string SSLOSLbl = "None (OS)";
+            const string X509Lbl = "X509";
+            const string ValidateCertificateLbl = "ValidateCertificate";
+            const string ValidateAnyCertificateLbl = "ValidateAnyCertificate";
+            const string InvalidCertEtrr = "Invalid certificate : {0}";
+
+            if (ftpSetup.SSL != SSLOSLbl) {
+                ftp.Config.SslProtocols = SslProtocols.Tls11 | SslProtocols.Tls12;
+            }
+            else {
+                // OS Defaults
+                ftp.Config.SslProtocols = SslProtocols.None;
+            }
+
+            switch (ftpSetup.ValidationCertificate) {
+                case X509Lbl:
+                    ftp.Config.SocketKeepAlive = false;
+                    ftp.Config.ClientCertificates.Add(new X509Certificate2(Convert.FromBase64String(Convert.ToBase64String(ftpSetup.sslCert))));
+                    ftp.ValidateCertificate += (control, e) => {
+                        e.Accept = e.PolicyErrors == SslPolicyErrors.None;
+                    };
+                    break;
+                case ValidateCertificateLbl:
+                    ftp.ValidateCertificate += (control, e) => {
+                        if (e.PolicyErrors == SslPolicyErrors.None || e.Certificate.GetRawCertDataString() == ftpSetup.sslCert.ToString()) {
+                            e.Accept = true;
+                        }
+                        else {
+                            throw new Exception(string.Format(InvalidCertEtrr, e.PolicyErrors));
+                        }
+                    };
+                    break;
+                case ValidateAnyCertificateLbl:
+                    ftp.Config.ValidateAnyCertificate = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        protected string DownloadFileBytes(string filename) {
             const string FailedToDownloadErr = "Failed to download {0}";
 
-            using (var ftp = new FtpClient(this.HostName, this.UserName, this.Passwd)) {
+            using (FtpClient ftp = new FtpClient(ftpSetup.hostName.ToString(), ftpSetup.userName.ToString(), ftpSetup.passwd.ToString())) {
                 ftp.Connect();
 
                 // download a file bytes
@@ -119,8 +134,8 @@
             }
         }
 
-        internal string GetListing(string foldername) {
-            using (var ftp = new FtpClient(this.HostName, this.UserName, this.Passwd)) {
+        protected string GetListing(string foldername) {
+            using (FtpClient ftp = new FtpClient(ftpSetup.hostName.ToString(), ftpSetup.userName.ToString(), ftpSetup.passwd.ToString())) {
                 ftp.Connect();
 
                 // get a recursive listing of the files & folders in a specific folder 
@@ -138,27 +153,18 @@
             }
         }
 
-        internal void SetSettings(string JsonString) {
-            const string HostNameLbl = "hostName";
-            const string UserNameLbl = "userName";
-            const string PasswdLbl = "passwd";
-            const string RootFolderLbl = "rootFolder";
-
-            JObject Json = JObject.Parse(JsonString);
-            this.HostName = Json.GetValue(HostNameLbl).ToString();
-            this.UserName = Json.GetValue(UserNameLbl).ToString();
-            this.Passwd = Json.GetValue(PasswdLbl).ToString();
-            this.RootFolder = Json.GetValue(RootFolderLbl).ToString();
+        protected void SetSettings(string JsonString) {
+            ftpSetup = JObject.Parse(JsonString);
         }
 
-        internal string SetReturnValue(string ReturnValue, string ErrorMessage) {
+        protected string SetReturnValue(string ReturnValue, string ErrorMessage) {
             JObject jreturn = new JObject() { { "returnValue", ReturnValue }, { "errorMessage", ErrorMessage } };
             return JsonConvert.SerializeObject(jreturn);
         }
-    }
 
-
-    internal class RootObject {
-        public List<FtpListItem> Items { get; set; }
+        protected internal class RootObject {
+            public List<FtpListItem> Items { get; set; }
+        }
+        protected internal class FtpClientSetup : DynamicObject { }
     }
 }
