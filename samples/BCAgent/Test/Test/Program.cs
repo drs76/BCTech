@@ -1,37 +1,49 @@
-﻿using System;
-using System.Collections.ObjectModel;
-using System.Collections.Specialized;
-using System.Text;
-using System.Drawing.Printing;
+﻿using System.Threading.Tasks;
+using System.Threading;
+using System;
+using Microsoft.Dynamics.BusinessCentral.Agent.RequestDispatcher;
+using Microsoft.Dynamics.BusinessCentral.Agent.Common;
 
 namespace Test {
     internal class Program {
         static void Main(string[] args) {
-            Console.WriteLine(GetLocalPrintersList());
-        }
+            Console.WriteLine("Business Central Agent");
+           
+            // TODO: argument validating and exit on invalid.
 
-        internal protected static string GetLocalPrintersList() {
-            foreach (var item in PrinterSettings.InstalledPrinters) {
-                Console.WriteLine(item);
-                return PrinterSettings.InstalledPrinters.ToString();
+            Console.WriteLine("Press 'q' to quit.");
+            var cts = new CancellationTokenSource();
+            Task.Run(() => RequestDispatcher.Start(
+                "bcagentrelayns.servicebus.windows.net",
+                "bcagentc",
+                "listen",
+                "53MNnWHQ7Of2Tul7AMljtz9JOGw6Ofp+JAjPrLPCp4c=",
+                AppContext.BaseDirectory,
+                new ConsoleLogger(), // TODO: LogLevel support 
+                cts.Token
+            ), cts.Token);
+
+            while (Console.ReadKey().KeyChar != 'q') {
+
             }
-            return string.Empty;
 
-                //using (PowerShell ps = PowerShell.Create()) {
-                //    try {
-                //        string script = @"Get-WmiObject win32_printer | Select-Object name";
-                //        ps.AddScript(script, true);
-                //        Collection<PSObject> res = ps.Invoke();
-                //        StringBuilder sb = new StringBuilder();
-                //        foreach (PSObject obj in res) {
-                //            sb.AppendLine(obj.ToString());
-                //        }
-                //        return sb.ToString();
-                //    }
-                //    catch (Exception ex) {
-                //        return string.Empty;
-                //    }
-                //}          
+            cts.Cancel();
+
+        }
+        /// <summary>
+        /// ILogger implementation that writes to console.
+        /// </summary>
+        class ConsoleLogger : ILogger {
+            public ConsoleLogger() {
+            }
+
+            public void LogException(Exception e) {
+                Console.WriteLine(e.ToString());
+            }
+
+            public void LogMessage(LogLevel level, string message) {
+                Console.WriteLine(message);
+            }
         }
     }
 }

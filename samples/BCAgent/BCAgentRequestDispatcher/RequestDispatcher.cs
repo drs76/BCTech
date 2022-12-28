@@ -11,10 +11,12 @@ namespace Microsoft.Dynamics.BusinessCentral.Agent.RequestDispatcher
     using System.Collections.Immutable;
     using System.Composition;
     using System.Diagnostics;
+    using System.IO;
     using System.Linq;
     using System.Net;
     using System.Threading;
     using System.Threading.Tasks;
+    using System.Web;
 
     public class RequestDispatcher
     {

@@ -1,9 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFrameworks>net6.0</TargetFrameworks>
-    <UseWindowsForms>True</UseWindowsForms>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net60;net48</TargetFrameworks>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BCAgentCommon\BCAgentCommon.csproj" />
+    <ProjectReference Include="..\..\BCAgentRequestDispatcher\BCAgentRequestDispatcher.csproj" />
+  </ItemGroup>
 
 </Project>

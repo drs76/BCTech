@@ -1,14 +1,17 @@
 /// <summary>
-/// Page PTEBCLocalPrinters (ID 50101).
+/// Page PTEBCLocalPrinters (ID 50125).
 /// </summary>
-page 50101 PTEBCLocalPrinters
+page 50125 PTEBCLocalPrinters
 {
     ApplicationArea = All;
-    Caption = '50120';
+    Caption = 'Local Printers';
     PageType = List;
     UsageCategory = Administration;
     SourceTable = "Name/Value Buffer";
     SourceTableTemporary = true;
+    Editable = false;
+    ShowFilter = false;
+    LinksAllowed = false;
 
     layout
     {
@@ -36,13 +39,12 @@ page 50101 PTEBCLocalPrinters
         TempNameValueBuffer: Record "Name/Value Buffer" temporary;
         LocalPrinterMgt: Codeunit PTEBCLocalPrinterMgt;
         TypeHelper: Codeunit "Type Helper";
-        SourceList: List of [Text];
         Printer: Text;
     begin
         LocalPrinterMgt.GetLocalPrinters();
-        SourceList := LocalPrinterMgt.GetLocalPrinters().Split(TypeHelper.NewLine());
-        foreach Printer in SourceList do
-            TempNameValueBuffer.AddNewEntry(CopyStr(Printer, 1, MaxStrLen(TempNameValueBuffer.Name)), Printer);
+        foreach Printer in LocalPrinterMgt.GetLocalPrinters().Split(TypeHelper.NewLine()) do
+            if StrLen(Printer) > 0 then
+                TempNameValueBuffer.AddNewEntry(CopyStr(Printer, 1, MaxStrLen(TempNameValueBuffer.Name)), Printer);
 
         Rec.Copy(TempNameValueBuffer, true);
     end;

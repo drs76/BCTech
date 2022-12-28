@@ -22,6 +22,7 @@
 		</ItemGroup>
 		<Message Text="Deploying plugin ..." />
 		<Copy SourceFiles="@(FilesToDeploy)" DestinationFolder="$(MSBuildProjectDirectory)\..\..\BCAgent\$(OutDir)\Plugins" SkipUnchangedFiles="true" />
-	</Target>
+	    <Copy SourceFiles="@(FilesToDeploy)" DestinationFolder="$(MSBuildProjectDirectory)\..\..\Test\Test\$(OutDir)\Plugins" SkipUnchangedFiles="true" />	
+</Target>
 </Project>
 

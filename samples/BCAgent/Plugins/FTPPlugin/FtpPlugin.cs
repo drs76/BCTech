@@ -165,6 +165,7 @@
         protected internal class RootObject {
             public List<FtpListItem> Items { get; set; }
         }
+
         protected internal class FtpClientSetup : DynamicObject { }
     }
 }
