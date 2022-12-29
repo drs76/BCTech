@@ -11,6 +11,7 @@ codeunit 50125 PTEBCLocalPrinterMgt
         PrintFileToLocalPrinterProcessTok: Label '/PrintFileToLocalPrinterProcess?body', Locked = true; // Body query is a placeholder for the reflection in .net
         PrintFileToLocalPrinterGSTok: Label '/PrintFileToLocalPrinterGS?body', Locked = true; // Body query is a placeholder for the reflection in .net
         PrintFileToLocalPrinterLPTok: Label '/PrintFileToLocalPrinterLP?body', Locked = true; // Body query is a placeholder for the reflection in .net
+        PrintFileToLocalPrinterIronPDFTok: Label '/PrintFileToLocalPrinterIronPDF?body', Locked = true; // Body query is a placeholder for the reflection in .net
         CombineTxt: Label '%1%2', Comment = '%1 - String1, %2 - String2';
 
     /// <summary>
@@ -45,18 +46,19 @@ codeunit 50125 PTEBCLocalPrinterMgt
         JsonBody: JsonObject;
         JsonBodyContent: JsonObject;
         TextBody: Text;
-        FileContentLbl: Label 'filecontent';
-        PrinternameLbl: Label 'printername';
+        FileContentTok: Label 'filecontent';
+        PrinternameTok: Label 'printername';
         BodyLbl: Label 'body';
     begin
-        JsonBodyContent.Add(PrinternameLbl, Printername);
-        JsonBodyContent.Add(FileContentLbl, Base64.ToBase64((DocumentStream)));
+        JsonBodyContent.Add(PrinternameTok, Printername);
+        JsonBodyContent.Add(FileContentTok, Base64.ToBase64(DocumentStream));
         JsonBody.Add(BodyLbl, JsonBodyContent);
         JsonBody.WriteTo(TextBody);
 
-        ServiceBusRelay.Put(BuildRequest(PrintFileToLocalPrinterLPTok), TextBody, Result);
+        //ServiceBusRelay.Put(BuildRequest(PrintFileToLocalPrinterLPTok), TextBody, Result);
         // ServiceBusRelay.Put(BuildRequest(PrintFileToLocalPrinterGSTok), TextBody, Result);
         //ServiceBusRelay.Put(BuildRequest(PrintFileToLocalPrinterProcessTok), TextBody, Result);
+        ServiceBusRelay.Put(BuildRequest(PrintFileToLocalPrinterIronPDFTok), TextBody, Result);
         Result := GetResult(Result);
     end;
 

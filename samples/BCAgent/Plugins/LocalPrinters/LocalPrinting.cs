@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.IO;
-using System.Text.RegularExpressions;
-using Ghostscript.NET;
-using Ghostscript.NET.Rasterizer;
 
 namespace LocalPrintersPlugin {
     internal class LocalPrinting {
@@ -53,9 +50,9 @@ namespace LocalPrintersPlugin {
         public void Printing() {
             try {
                 try {
-                    for (int i = 1; i < noOfPages; i++) {
-                        imagePages.Add(Freeware.Pdf2Png.Convert(streamToPrint.BaseStream, 1));
-                    }
+                    //for (int i = 1; i < noOfPages; i++) {
+                    //    imagePages.Add(Freeware.Pdf2Png.Convert(streamToPrint.BaseStream, 1));
+                    //}
    
                     printFont = new Font("Segoe UI", 8);
                     PrintDocument pd = new PrintDocument();

@@ -1,22 +1,19 @@
 ﻿
 namespace LocalPrintersPlugin {
-    using Microsoft.Dynamics.BusinessCentral.Agent.Common;
-    using Newtonsoft.Json.Linq;
-    using Newtonsoft.Json;
-    using System.Drawing.Printing;
-    using System.Text;
-    using System.Runtime.InteropServices;
-    using Ghostscript.NET.Processor;
-    using System.IO;
-    using System.Collections.Generic;
-    using System;
     using Ghostscript.NET;
-    using System.Linq;
-    using System.Drawing;
-    using System.Text.RegularExpressions;
+    using Ghostscript.NET.Processor;
+    using Microsoft.Dynamics.BusinessCentral.Agent.Common;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
+    using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
-    using System.Runtime.InteropServices.ComTypes;
-    using System.Security.Policy;
+    using System.Drawing.Printing;
+    using System.IO;
+    using System.Linq;
+    using System.Runtime.InteropServices;
+    using System.Text;
+    using System.Text.RegularExpressions;
     using System.Threading;
 
     [AgentPlugin("localPrinters/V1.0")]
@@ -24,7 +21,7 @@ namespace LocalPrintersPlugin {
         protected string fileNameToPrint;
         protected string printerName;
         protected int noOfPages;
-        protected byte[] fileContent;
+        protected string fileContent;
         protected string returnValue;
         protected string returnError;
 
@@ -54,39 +51,22 @@ namespace LocalPrintersPlugin {
         }
 
         [PluginMethod("PUT")]
-        public string PrintFileToLocalPrinterLP(string body) {
-            returnError = string.Empty;
-            returnValue = string.Empty;
-            GetPrintDetails(body);
-            fileNameToPrint = CreateTempFile();
-            Stream strm = new MemoryStream(fileContent);
-            try {
-                LocalPrinting lp = new LocalPrinting(printerName, strm, noOfPages);
-            }
-            catch (Exception ex) {
-                returnError = ex.Message;
-            }
-            return SetReturnValue(string.Empty, returnError);
-        }
-
-
-        [PluginMethod("PUT")]
         public string PrintFileToLocalPrinterProcess(string body) {
             returnError = string.Empty;
             returnValue = string.Empty;
             GetPrintDetails(body);
             fileNameToPrint = CreateTempFile();
-            try {
-                using (Process p = new Process()) {
-                    using (FileStream fs = new FileStream(fileNameToPrint, FileMode.OpenOrCreate))
-                    using (StreamWriter sw = new StreamWriter(fs))
-                        sw.Write(Convert.ToBase64String(fileContent));
 
+            try {
+                WriteFileContent();
+
+                using (Process p = new Process()) {
                     p.StartInfo = new ProcessStartInfo() {
+                        UseShellExecute = true,
                         CreateNoWindow = true,
                         Verb = "PrintTo",
                         Arguments = printerName,
-                        FileName = @fileNameToPrint
+                        FileName = fileNameToPrint
                     };
 
                     p.Start();
@@ -115,10 +95,7 @@ namespace LocalPrintersPlugin {
             returnValue = string.Empty;
             GetPrintDetails(body);
             fileNameToPrint = CreateTempFile();
-
-            using (FileStream fs = new FileStream(fileNameToPrint, FileMode.OpenOrCreate))
-            using (StreamWriter sw = new StreamWriter(fs, Encoding.UTF8))
-                sw.Write(fileContent);
+            WriteFileContent();
 
             using (GhostscriptProcessor processor = new GhostscriptProcessor()) {
 
@@ -135,13 +112,18 @@ namespace LocalPrintersPlugin {
 
                 processor.Completed += OnProcessExited;
                 processor.Error += OnProcessError;
-
+                
                 processor.StartProcessing(switches.ToArray(), null);
                 while (processor.IsRunning) {
                 }
-
             }
             return SetReturnValue(returnValue, returnError);
+        }
+
+        private void WriteFileContent() {
+            using (FileStream fs = new FileStream(fileNameToPrint, FileMode.OpenOrCreate))
+            using (StreamWriter sw = new StreamWriter(fs, Encoding.UTF8))
+                sw.Write(new MemoryStream(Convert.FromBase64String(fileContent)));
         }
 
         [PluginMethod("GET")]
@@ -203,7 +185,7 @@ namespace LocalPrintersPlugin {
                         printerName = prop.ToString();
                         return true;
                     case filecontentLbl:
-                        fileContent = Convert.FromBase64String(prop.ToString());
+                        fileContent = prop.ToString();
                         return true;
                     default:
                         break;

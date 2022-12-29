@@ -64,9 +64,14 @@ codeunit 50127 PTEBCLocalPrinterHelper
         Printername: Text;
         GuilAllowedErr: Label 'GuiAllowed must be true.';
         PrinternameLbl: Label 'printername';
+        DocumentTypeTok: Label 'documenttype';
     begin
         if not GuiAllowed then
             Error(GuilAllowedErr);
+
+        if PayLoad.Contains(DocumentTypeTok) then
+            if PayLoad.Get(DocumentTypeTok, JTOken) then
+                Message(JToken.AsValue().AsText());
 
         if not PayLoad.Contains(PrinternameLbl) then
             exit;
